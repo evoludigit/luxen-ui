@@ -432,9 +432,14 @@ export class DataTable extends LuxenElement {
     const keys = row
       ? [...row.children].map((cell) => (cell as HTMLElement).dataset.key ?? null)
       : [];
-    const scope = `[data-column-scope="${this._scope}"] > table > :is(thead, tbody, tfoot) > tr`;
+    // The <col> too: columns are positional, so a width set on a hidden column's
+    // <col> would otherwise land on the column that slides into its place.
+    const table = `[data-column-scope="${this._scope}"] > table`;
     const text = hiddenIndices(keys, hidden)
-      .map((i) => `${scope} > :nth-child(${i}) { display: none; }`)
+      .map(
+        (i) =>
+          `${table} > :is(thead, tbody, tfoot) > tr > :nth-child(${i}), ${table} > colgroup > col:nth-child(${i}) { display: none; }`,
+      )
       .join('\n');
     if (text === this._sheetText) return;
     this._sheetText = text;

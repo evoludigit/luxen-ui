@@ -233,6 +233,29 @@ describe('With persist-key, the user’s columns are kept', () => {
   });
 });
 
+describe('Column widths follow the columns', () => {
+  it('hides the <col> of a hidden column, so widths stay on their own columns', async () => {
+    const el = await mount(`
+      <l-data-table>
+        <table class="l-table" style="table-layout: fixed; width: 600px">
+          <colgroup><col style="width: 100px"><col style="width: 300px"><col style="width: 200px"></colgroup>
+          <thead><tr>
+            <th scope="col" data-key="a">A</th>
+            <th scope="col" data-key="b" data-hidden>B</th>
+            <th scope="col" data-key="c">C</th>
+          </tr></thead>
+          <tbody><tr><td class="a">1</td><td>2</td><td class="c">3</td></tr></tbody>
+        </table>
+      </l-data-table>`);
+    await settle(el);
+
+    expect(getComputedStyle(el.querySelector('col:nth-child(2)')!).display).toBe('none');
+    // A and C keep their own widths (100 and 200), not B's 300 shifted onto C.
+    const width = (c: string) => el.querySelector(c)!.getBoundingClientRect().width;
+    expect(Math.round(width('.c') / width('.a'))).toBe(2);
+  });
+});
+
 describe('The hiding stylesheet stays with the element', () => {
   it('reaches a table inside a shadow root', async () => {
     const outer = document.createElement('div');
