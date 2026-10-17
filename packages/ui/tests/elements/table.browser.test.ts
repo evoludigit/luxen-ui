@@ -10,7 +10,8 @@ import { userEvent } from './support/user-event.js';
 // assertions read the painted result.
 import '../../src/css/preset.css';
 import '../../src/css/elements/button.css';
-import '../../src/css/elements/table.css';
+import '../../src/css/elements/table/lines.css';
+import '../../src/css/elements/table/grid.css';
 
 let host: HTMLElement;
 
@@ -211,11 +212,16 @@ describe('Row states come from the platform', () => {
     expect(style(item).backgroundImage).toBe(selected);
   });
 
-  it('stripes every other row when asked', () => {
-    mount(TABLE('data-striped'));
+  it('stripes every other row when --stripe-color is set', () => {
+    mount(
+      `${TABLE()}${TABLE('style="--stripe-color: var(--l-color-bg-state-hover)"').replace(/row-/g, 'striped-')}`,
+    );
 
-    expect(style(cell('#row-1a2b .item')).backgroundImage).not.toBe(
+    expect(style(cell('#row-1a2b .item')).backgroundImage).toBe(
       style(cell('#row-9f1c .item')).backgroundImage,
+    );
+    expect(style(cell('#striped-1a2b .item')).backgroundImage).not.toBe(
+      style(cell('#striped-9f1c .item')).backgroundImage,
     );
   });
 
@@ -461,4 +467,49 @@ describe('Sticky parts stay in view', () => {
       expect(style(start).boxShadow).not.toBe(atRest);
     },
   );
+});
+
+describe('Appearances', () => {
+  const PLAIN = (attrs = '') => `
+    <table class="l-table" ${attrs}>
+      <thead><tr><th scope="col" class="h1">SKU</th><th scope="col" class="h2">Name</th></tr></thead>
+      <tbody>
+        <tr><th scope="row" class="a1">SKU-1</th><td class="a2">Desk lamp</td></tr>
+        <tr><th scope="row" class="b1">SKU-2</th><td class="b2">Office chair</td></tr>
+      </tbody>
+    </table>`;
+
+  it('draws rules between rows only by default (lines)', () => {
+    mount(PLAIN());
+
+    expect(style(cell('.a1')).borderBottomWidth).toBe('1px');
+    expect(style(cell('.a1')).borderRightWidth).toBe('0px');
+    expect(style(cell('.b1')).borderBottomWidth).toBe('0px');
+    expect(style(host.querySelector('table')!).borderTopWidth).toBe('0px');
+  });
+
+  it('draws every cell edge and an outer border with data-appearance="grid"', () => {
+    mount(PLAIN('data-appearance="grid"'));
+
+    expect(style(cell('.a1')).borderRightWidth).toBe('1px');
+    expect(style(cell('.a2')).borderRightWidth).toBe('0px');
+    expect(style(cell('.a1')).borderBottomWidth).toBe('1px');
+    expect(style(cell('.b2')).borderBottomWidth).toBe('0px');
+    expect(style(host.querySelector('table')!).borderTopWidth).toBe('1px');
+  });
+
+  it('keeps the grid header opaque and rounds its corner cells', () => {
+    mount(PLAIN('data-appearance="grid"'));
+
+    expect(style(cell('.h1')).backgroundColor).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+    expect(style(cell('.h1')).borderTopLeftRadius).not.toBe('0px');
+    expect(style(cell('.b2')).borderBottomRightRadius).not.toBe('0px');
+  });
+
+  it('applies each appearance only where it is asked, with both imported', () => {
+    mount(`${PLAIN()}${PLAIN('data-appearance="grid"').replace(/class="a1"/, 'class="g1"')}`);
+
+    expect(style(cell('.a1')).borderRightWidth).toBe('0px');
+    expect(style(cell('.g1')).borderRightWidth).toBe('1px');
+  });
 });

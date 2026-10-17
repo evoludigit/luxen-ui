@@ -1,6 +1,8 @@
 @layer components {
   /**
-   * Table — `.l-table` on a native `<table>`.
+   * Table — `.l-table` on a native `<table>`: the structure and states every
+   * appearance shares. The appearances (`lines.css`, `grid.css`) add the rules
+   * between cells; each imports this file, so a page imports one of them.
    *
    * CSS only. Each state a data table shows is already a platform state, so this
    * file styles those states instead of adding attributes of its own:
@@ -38,6 +40,7 @@
     --header-offset: 0px;
     --background-color: var(--l-color-surface);
     --border-color: var(--l-color-divider);
+    --stripe-color: transparent;
 
     --_size: var(--l-size-control-md);
     --_padding-block: var(--l-spacing-1);
@@ -91,7 +94,6 @@
       block-size: var(--row-height);
       padding-block: var(--_padding-block);
       padding-inline: var(--_padding-inline);
-      border-block-end: 1px solid var(--border-color);
       background-color: var(--_cell-background);
       background-image:
         linear-gradient(var(--_row-mark), var(--_row-mark)),
@@ -135,18 +137,9 @@
       text-align: center;
     }
 
-    /* ── Row groups and totals ───────────────────────────────────────────── */
-
-    /* Each row group keeps the rule under its last row, which separates it from
-       the next group; only the table's last group drops it. The totals carry
-       one rule of their own, above them. */
-    & > tbody:last-of-type > tr:last-child > :where(th, td),
-    & > tfoot > tr:last-child > :where(th, td) {
-      border-block-end: 0;
-    }
+    /* ── Totals ──────────────────────────────────────────────────────────── */
 
     & > tfoot > tr:first-child > :where(th, td) {
-      border-block-start: 1px solid var(--l-color-border);
       font-weight: var(--l-font-weight-medium);
     }
 
@@ -157,7 +150,6 @@
       position: sticky;
       inset-block-start: var(--header-offset);
       z-index: var(--_z-header);
-      border-block-end-color: var(--l-color-border);
       color: var(--l-color-text-secondary);
       font-weight: var(--l-font-weight-medium);
       white-space: nowrap;
@@ -226,8 +218,9 @@
 
     /* ── Row states ──────────────────────────────────────────────────────── */
 
-    &[data-striped] > tbody > tr:nth-child(even) > * {
-      --_row-stripe: color-mix(in oklab, var(--l-color-bg-state-hover) 60%, transparent);
+    /* Stripes are a token, so they combine with any appearance. */
+    & > tbody > tr:nth-child(even) > * {
+      --_row-stripe: var(--stripe-color);
     }
 
     /* Hover is click feedback, so only a row that opens something gets it. */
