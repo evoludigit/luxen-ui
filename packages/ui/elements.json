@@ -363,7 +363,8 @@
       "type": "native",
       "inSkill": true,
       "inMockups": true,
-      "selector": ".l-table"
+      "selector": ".l-table",
+      "appearances": ["lines", "grid"]
     },
     {
       "name": "tabs",

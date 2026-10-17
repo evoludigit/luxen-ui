@@ -43,11 +43,20 @@ export default defineA11yFixture({
         </tbody>
       </table>`,
     interactive: `
-      <table class="l-table" data-striped>
+      <table class="l-table" style="--stripe-color: var(--l-color-bg-state-hover)">
         <caption>Products</caption>
         ${HEAD}
         <tbody>
           ${ROW('9f1c', 'SKU-1042', 'Desk lamp', '4,210', 'checked')}
+          ${ROW('1a2b', 'SKU-2087', 'Office chair', '12,004')}
+        </tbody>
+      </table>`,
+    grid: `
+      <table class="l-table" data-appearance="grid">
+        <caption>Products</caption>
+        ${HEAD}
+        <tbody>
+          ${ROW('9f1c', 'SKU-1042', 'Desk lamp', '4,210')}
           ${ROW('1a2b', 'SKU-2087', 'Office chair', '12,004')}
         </tbody>
       </table>`,

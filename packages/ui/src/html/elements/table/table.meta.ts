@@ -4,7 +4,7 @@
  * docs and the generated skill, read by the `native-meta` CEM plugin and emitted
  * into dist/metadata/table.json.
  *
- * Keep this in sync with src/css/elements/table.css.
+ * Keep this in sync with src/css/elements/table/ (_base.css + lines/grid appearances).
  */
 
 /**
@@ -15,8 +15,8 @@
  *
  * @cssClass .l-table - Applied to the `<table>`. Name it with a `<caption>` (visible or `.l-visually-hidden`) or `aria-label`; head the columns with `<th scope="col">` and each row with the `<th scope="row">` that identifies it.
  *
+ * @attribute data-appearance - lines | grid — Rules between rows only (the default), or every cell drawn with an outer border and a filled header. Matches the imported appearance CSS.
  * @attribute data-size - sm | lg — Row height, on the control size scale: a control of the same size fits a row. Defaults to the medium size.
- * @attribute data-striped - Tints every other body row.
  * @attribute data-type - number — On a column's `<th>` and `<td>`s: aligns it to the inline end with tabular figures.
  * @attribute data-sticky - start | end — On every cell of a column: keeps it at that inline edge while the table scrolls sideways.
  * @attribute data-select - On the cells holding each row's native checkbox (or radio): shrinks the column to its control, and tints the row while its input is checked.
@@ -26,7 +26,8 @@
  * @cssproperty [--row-height=calc(var(--l-size-control-md) + 2 * var(--l-spacing-1))] - Minimum row height; content taller than it grows the row.
  * @cssproperty [--header-offset=0px] - Distance from the top of the scroll container at which the header sticks, e.g. the height of a fixed bar above the table.
  * @cssproperty [--background-color=var(--l-color-surface)] - Opaque background of the header and sticky columns, which cover the rows scrolling under them. Match it to the surface the table sits on.
- * @cssproperty [--border-color=var(--l-color-divider)] - Rule between rows.
+ * @cssproperty [--border-color=var(--l-color-divider)] - Rules between rows, and between columns in the grid appearance.
+ * @cssproperty [--stripe-color=transparent] - Tint of every other body row; set it to stripe the rows in any appearance, e.g. `var(--l-color-bg-state-hover)`.
  *
  * @example Basic
  * <table class="l-table">

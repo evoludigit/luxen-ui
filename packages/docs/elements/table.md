@@ -6,6 +6,7 @@ outline: deep
 import basic from '../.vitepress/examples/table/Basic.html?raw'
 import sizes from '../.vitepress/examples/table/Sizes.html?raw'
 import striped from '../.vitepress/examples/table/Striped.html?raw'
+import grid from '../.vitepress/examples/table/Grid.html?raw'
 import sticky from '../.vitepress/examples/table/Sticky.html?raw'
 import selection from '../.vitepress/examples/table/Selection.html?raw'
 import rowLink from '../.vitepress/examples/table/RowLink.html?raw'
@@ -52,6 +53,42 @@ A stylesheet, no JavaScript. The states it shows are the platform's: `aria-sort`
 
 ## Options
 
+### Appearance
+
+Pick a look with `data-appearance`. Each appearance has its own CSS import; the one imported is also the default.
+
+#### Lines
+
+Rules between rows only. The default.
+
+<ComponentWrapper :html="basic" />
+
+::: code-group
+
+```css [CSS]
+@import 'luxen-ui/css/table/lines';
+```
+
+<<< @/.vitepress/examples/table/Basic.html [HTML]
+
+:::
+
+#### Grid
+
+Every cell drawn, an outer border and a filled header: for dense data read across rows and down columns.
+
+<ComponentWrapper :html="grid" />
+
+::: code-group
+
+```css [CSS]
+@import 'luxen-ui/css/table/grid';
+```
+
+<<< @/.vitepress/examples/table/Grid.html [HTML]
+
+:::
+
 ### Basic
 
 Add `class="l-table"` to a `<table>`. Name it with a `<caption>`, head each column with `<th scope="col">` and each row with the `<th scope="row">` that identifies it. Add `data-type="number"` to the cells of a numeric column, header included: it aligns to the inline end with tabular figures.
@@ -76,7 +113,7 @@ Add `data-size="sm"` or `data-size="lg"`. Rows follow the control size scale, so
 
 ### Striped
 
-Add `data-striped`.
+Set `--stripe-color` to a tint, e.g. `var(--l-color-bg-state-hover)`: every other row takes it, in any appearance.
 
 <ComponentWrapper :html="striped" />
 
@@ -193,7 +230,7 @@ Render a single row whose cell spans every column.
 ::: code-group
 
 ```css [CSS]
-@import 'luxen-ui/css/table';
+@import 'luxen-ui/css/table/lines'; /* or table/grid */
 ```
 
 :::
