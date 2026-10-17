@@ -29,6 +29,7 @@ export const ELEMENT_CLASSES: Record<string, string> = {
   'carousel-item': 'CarouselItem',
   'color-scheme-icon': 'ColorSchemeIcon',
   combobox: 'Combobox',
+  'data-table': 'DataTable',
   dialog: 'Dialog',
   divider: 'Divider',
   drawer: 'Drawer',

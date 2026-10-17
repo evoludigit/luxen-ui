@@ -52,6 +52,9 @@ export interface LuxenTranslation {
   // input-group
   showPassword?: string;
 
+  // data-table
+  selectAllRows?: string;
+
   // input-stepper
   increaseValue: string;
   decreaseValue: string;

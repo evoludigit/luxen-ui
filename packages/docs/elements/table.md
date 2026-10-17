@@ -12,6 +12,8 @@ import selection from '../.vitepress/examples/table/Selection.html?raw'
 import rowLink from '../.vitepress/examples/table/RowLink.html?raw'
 import footer from '../.vitepress/examples/table/Footer.html?raw'
 import empty from '../.vitepress/examples/table/Empty.html?raw'
+import selectableRows from '../.vitepress/examples/table/SelectableRows.html?raw'
+import formSubmit from '../.vitepress/examples/table/FormSubmit.html?raw'
 </script>
 
 # Table <Badge type="tip">&lt;table&gt;</Badge>
@@ -50,6 +52,8 @@ A data table on a native `<table>`, for lists of records.
 :::
 
 A stylesheet, no JavaScript. The states it shows are the platform's: `aria-sort` for the sorted column, a checked checkbox for a selected row, a URL fragment for the row to jump to. The same markup works in a server-rendered page and in a framework template.
+
+Wrap the table in `<l-data-table>` to add what HTML lacks: a reported sort, and with `selectable`, a header checkbox, Shift ranges and a selection that outlives the page. It renders nothing else; the page keeps rendering the rows.
 
 ## Options
 
@@ -135,7 +139,9 @@ The header sticks to the top of the nearest scroll container. Put `data-sticky="
 
 ### Sortable columns
 
-Put a `<button>` in each sortable header, and `aria-sort="ascending"` or `"descending"` on the sorted one. The stylesheet shows the state; sorting is your script's job, as in this demo. When the server sorts, use a link to the sorted URL instead of the button (`<a href="?sort=-sku">`): it takes the same look, and needs no script.
+Put a `<button>` in each sortable header, and `aria-sort="ascending"` or `"descending"` on the sorted one. When the server sorts, use a link to the sorted URL instead (`<a href="?sort=-sku">`): it takes the same look, and needs no script.
+
+In script, wrap the table in `<l-data-table>` and give each sortable header a `data-key`: a click fires `sort-change` with the next sort (ascending, descending, then none). The element does not sort or touch `aria-sort`; the page sorts its rows and renders `aria-sort` from the event.
 
 <TableSortDemo />
 
@@ -147,13 +153,26 @@ Put a `<button>` in each sortable header, and `aria-sort="ascending"` or `"desce
 
 ### Selectable rows
 
-Put a native checkbox in a `data-select` cell at the start of each row, and name it with `aria-label`. The row is tinted while its checkbox is checked; inside a `<form>`, the checked rows submit their `value`s. A select-all checkbox in the header needs script, so this example labels the column instead.
+Put a native checkbox in a `data-select` cell at the start of each row, and name it with `aria-label`. The row is tinted while its checkbox is checked; inside a `<form>`, the checked rows submit their `value`s. Without script there is no select-all, so this example labels the column instead.
 
 <ComponentWrapper :html="selection" />
 
 ::: details Code
 ::: code-group
 <<< @/.vitepress/examples/table/Selection.html [HTML]
+:::
+
+### Selection with `l-data-table`
+
+Add `selectable` to `<l-data-table>` and leave the header's `data-select` cell empty: a header checkbox is added once the script runs, showing a mixed state while some rows are selected. Shift with a click or with Space selects a range. A selected row stays selected when it leaves the table, a filter or another page, and is checked again when it returns. Use radios instead of checkboxes to select one row at most.
+
+The element fires `selection-change` with `selectedKeys`, the inputs' `value`s. Set `selectedKeys` or call `clearSelection()` to drive it from the page; do not bind `checked` on the row inputs.
+
+<ComponentWrapper :html="selectableRows" />
+
+::: details Code
+::: code-group
+<<< @/.vitepress/examples/table/SelectableRows.html [HTML]
 :::
 
 ### Row link
@@ -195,6 +214,75 @@ Render a single row whose cell spans every column.
 <<< @/.vitepress/examples/table/Empty.html [HTML]
 :::
 
+## Examples
+
+### Loading from a server
+
+Sort on the server: refetch on `sort-change`, set `aria-busy` while the request runs, and render placeholder rows with `l-skeleton` on the first load.
+
+<DataTableServerDemo />
+
+::: details Code
+::: code-group
+<<< @/.vitepress/components/DataTableServerDemo.vue [Vue]
+:::
+
+### Bulk actions
+
+Show the actions from `selection-change`, in a `role="status"` region so the count is announced. When every visible row is selected (`allVisibleSelected`) and the query matches more, offer to select them all and set `allMatching`: the page then acts on the query rather than on the keys. The next change the user makes clears it.
+
+<DataTableBulkDemo />
+
+::: details Code
+::: code-group
+<<< @/.vitepress/components/DataTableBulkDemo.vue [Vue]
+:::
+
+### Inside a form
+
+The checked rows submit their values with the form, with or without the script.
+
+<ComponentWrapper :html="formSubmit" />
+
+::: details Code
+::: code-group
+<<< @/.vitepress/examples/table/FormSubmit.html [HTML]
+:::
+
+### Listening to the events
+
+::: code-group
+
+```html [Vue]
+<l-data-table
+  selectable
+  @sort-change="sort = $event.sort"
+  @selection-change="selected = $event.selectedKeys"
+>
+  <table class="l-table">
+    …
+  </table>
+</l-data-table>
+```
+
+```jsx [React 19]
+<l-data-table
+  selectable
+  onsort-change={(e) => setSort(e.sort)}
+  onselection-change={(e) => setSelected(e.selectedKeys)}
+>
+  <table className="l-table">…</table>
+</l-data-table>
+```
+
+```js [JavaScript]
+const table = document.querySelector('l-data-table');
+table.addEventListener('sort-change', (e) => render({ sort: e.sort }));
+table.addEventListener('selection-change', (e) => update(e.selectedKeys));
+```
+
+:::
+
 ## Accessibility
 
 ### Criteria
@@ -206,6 +294,7 @@ Render a single row whose cell spans every column.
   { Check: 'Selection', Description: 'Selection is a native checkbox with its own name and checked state; no `aria-selected` is needed on the row', WCAG: '[WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 11.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#11.1)' },
   { Check: 'Row link', Description: 'The row link is a real `<a>`: listed among the page links, reachable by `Tab`, opened with `Enter`', WCAG: '[WCAG 2.1.1](https://www.w3.org/WAI/WCAG22/Understanding/keyboard), [WCAG 2.4.4](https://www.w3.org/WAI/WCAG22/Understanding/link-purpose-in-context), [RGAA 6.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#6.1), [RGAA 7.3](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.3)' },
   { Check: 'Sort glyph', Description: 'The direction glyph of an unsorted column uses the tertiary text color, above 3:1 against the surface in both schemes', WCAG: '[WCAG 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast), [RGAA 3.3](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#3.3)' },
+  { Check: 'Header checkbox', Description: 'The checkbox `l-data-table` adds is named in the page language and reports a mixed state while some rows are selected; it exists only once the script runs, so there is never a control that does nothing', WCAG: '[WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1)' },
   { Check: 'Focus ring', Description: 'Header buttons and the row link show the Luxen focus ring', WCAG: '[WCAG 2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible), [RGAA 10.7](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#10.7)' },
 ]" :rules="[
   'Name the table with a `&lt;caption&gt;` or `aria-label`',
@@ -221,6 +310,8 @@ Render a single row whose cell spans every column.
   { Key: 'Tab', Description: 'Moves through the header controls, then each row’s checkbox, row link and actions' },
   { Key: 'Enter', Description: 'Activates the focused header button or follows the focused row link' },
   { Key: 'Space', Description: 'Activates the focused header button or toggles the focused checkbox' },
+  { Key: 'Shift + Space', Description: 'With `l-data-table selectable`: gives every row from the last toggled one to the focused one the same state' },
+  { Key: 'Shift + click', Description: 'Same, with the pointer' },
 ]" />
 
 ## API reference
@@ -231,11 +322,16 @@ Render a single row whose cell spans every column.
 
 ```css [CSS]
 @import 'luxen-ui/css/table/lines'; /* or table/grid */
+@import 'luxen-ui/css/data-table';
+```
+
+```js [JS]
+import 'luxen-ui/data-table';
 ```
 
 :::
 
-Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l-button` (`luxen-ui/css/button`).
+The CSS covers the table itself; the JS import upgrades `l-data-table` with sorting and selection. Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l-button` (`luxen-ui/css/button`).
 
 ### Attributes
 
@@ -248,3 +344,11 @@ Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l
 ### CSS custom properties
 
 <ApiTable element="table" section="cssProperties" />
+
+### Data table
+
+<ApiTable element="data-table" section="properties" />
+
+<ApiTable element="data-table" section="events" />
+
+<ApiTable element="data-table" section="methods" />
