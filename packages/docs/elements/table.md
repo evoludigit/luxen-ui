@@ -7,7 +7,6 @@ import basic from '../.vitepress/examples/table/Basic.html?raw'
 import sizes from '../.vitepress/examples/table/Sizes.html?raw'
 import striped from '../.vitepress/examples/table/Striped.html?raw'
 import sticky from '../.vitepress/examples/table/Sticky.html?raw'
-import sortable from '../.vitepress/examples/table/Sortable.html?raw'
 import selection from '../.vitepress/examples/table/Selection.html?raw'
 import rowLink from '../.vitepress/examples/table/RowLink.html?raw'
 import footer from '../.vitepress/examples/table/Footer.html?raw'
@@ -99,13 +98,14 @@ The header sticks to the top of the nearest scroll container. Put `data-sticky="
 
 ### Sortable columns
 
-Put a `<button>` in each sortable header, and `aria-sort="ascending"` or `"descending"` on the sorted one; your script sorts on click. When the server sorts, use a link to the sorted URL instead of the button (`<a href="?sort=-sku">`): it takes the same look.
+Put a `<button>` in each sortable header, and `aria-sort="ascending"` or `"descending"` on the sorted one. The stylesheet shows the state; sorting is your script's job, as in this demo. When the server sorts, use a link to the sorted URL instead of the button (`<a href="?sort=-sku">`): it takes the same look, and needs no script.
 
-<ComponentWrapper :html="sortable" />
+<TableSortDemo />
 
 ::: details Code
 ::: code-group
 <<< @/.vitepress/examples/table/Sortable.html [HTML]
+<<< @/.vitepress/components/TableSortDemo.vue [Vue]
 :::
 
 ### Selectable rows
