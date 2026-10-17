@@ -476,7 +476,7 @@ export class DataTable extends LuxenElement {
     }
   }
 
-  /** One stylesheet on the element's own root — document or shadow root (spike S5). */
+  /** One stylesheet on the element's own root — document or shadow root. */
   private _applyHiding() {
     const row = this.querySelector(HEADER_ROW);
     const hidden = new Set(this._columns.filter((c) => !c.visible).map((c) => c.key));
@@ -484,12 +484,14 @@ export class DataTable extends LuxenElement {
       ? [...row.children].map((cell) => (cell as HTMLElement).dataset.key ?? null)
       : [];
     // The <col> too: columns are positional, so a width set on a hidden column's
-    // <col> would otherwise land on the column that slides into its place.
+    // <col> would otherwise land on the column that slides into its place. Rows
+    // with a spanning cell (an empty state, a group heading) don't follow the
+    // header's positions and are left alone.
     const table = `[data-column-scope="${this._scope}"] > table`;
     const text = hiddenIndices(keys, hidden)
       .map(
         (i) =>
-          `${table} > :is(thead, tbody, tfoot) > tr > :nth-child(${i}), ${table} > colgroup > col:nth-child(${i}) { display: none; }`,
+          `${table} > :is(thead, tbody, tfoot) > tr:not(:has(> [colspan])) > :nth-child(${i}), ${table} > colgroup > col:nth-child(${i}) { display: none; }`,
       )
       .join('\n');
     if (text === this._sheetText) return;
