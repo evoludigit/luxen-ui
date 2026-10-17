@@ -1,0 +1,255 @@
+// oxlint-disable-next-line typescript/triple-slash-reference -- ambient *.css module for the side-effect CSS import below.
+/// <reference path="./a11y/a11y-env.d.ts" />
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
+import '../../src/html/elements/data-table/index.js';
+import {
+  ColumnsRequestEvent,
+  type ColumnChangeEvent,
+  type DataTable,
+} from '../../src/html/elements/data-table/data-table.js';
+import { waitForEvent } from './support/events.js';
+
+// Column order and visibility belong to the table element; the page renders the
+// order it reports, and the element hides columns with a stylesheet of its own,
+// never by touching the cells.
+
+let host: HTMLElement;
+afterEach(() => {
+  host?.remove();
+  localStorage.clear();
+});
+
+async function mount(html: string, root: HTMLElement | ShadowRoot = document.body) {
+  host = document.createElement('div');
+  if (root instanceof ShadowRoot) {
+    root.innerHTML = html;
+  } else {
+    host.innerHTML = html;
+    root.append(host);
+  }
+  const scope = root instanceof ShadowRoot ? root : host;
+  await customElements.whenDefined('l-data-table');
+  const el = scope.querySelector<DataTable>('l-data-table')!;
+  await settle(el);
+  return el;
+}
+
+async function settle(el: DataTable) {
+  await el.updateComplete;
+  await new Promise((r) => setTimeout(r, 0));
+}
+
+const TABLE = (attrs = '', headers = DEFAULT_HEADERS) => `
+  <l-data-table ${attrs}>
+    <table class="l-table">
+      <caption>Products</caption>
+      <thead><tr>${headers}</tr></thead>
+      <tbody>
+        <tr><th scope="row" class="sku">SKU-1</th><td class="name">Desk lamp</td><td class="warehouse">North</td><td class="stock">3</td></tr>
+      </tbody>
+    </table>
+  </l-data-table>`;
+
+const DEFAULT_HEADERS = `
+  <th scope="col" data-key="sku" data-fixed>SKU</th>
+  <th scope="col" data-key="name">Name</th>
+  <th scope="col" data-key="warehouse" data-hidden>Warehouse</th>
+  <th scope="col" data-key="stock" aria-label="Units in stock">#</th>`;
+
+const shown = (root: ParentNode, cls: string) =>
+  getComputedStyle(root.querySelector(`.${cls}`)!).display !== 'none';
+
+describe('Columns come from the header', () => {
+  it('lists every keyed column with its accessible name, flags and visibility', async () => {
+    const el = await mount(TABLE());
+
+    expect(el.columns).toEqual([
+      { key: 'sku', label: 'SKU', fixed: true, visible: true },
+      { key: 'name', label: 'Name', fixed: false, visible: true },
+      { key: 'warehouse', label: 'Warehouse', fixed: false, visible: false },
+      { key: 'stock', label: 'Units in stock', fixed: false, visible: true },
+    ]);
+  });
+
+  it('hides a data-hidden column, header and cells, without touching them', async () => {
+    const el = await mount(TABLE());
+
+    expect(shown(host, 'warehouse')).toBe(false);
+    expect(shown(host, 'name')).toBe(true);
+    expect(el.querySelector('.warehouse')!.getAttribute('style')).toBeNull();
+  });
+});
+
+describe('The page sets columns, the user changes them', () => {
+  it('applies columns set by the page without reporting them', async () => {
+    const el = await mount(TABLE());
+    const listener = vi.fn();
+    el.addEventListener('column-change', listener);
+
+    el.columns = el.columns.map((c) => ({ ...c, visible: c.key !== 'name' || c.fixed }));
+    await settle(el);
+
+    expect(shown(host, 'name')).toBe(false);
+    expect(shown(host, 'warehouse')).toBe(true);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('applies a user change and reports the new columns', async () => {
+    const el = await mount(TABLE());
+    const next = waitForEvent(el, 'column-change') as Promise<ColumnChangeEvent>;
+
+    const columns = el.columns.map((c) => (c.key === 'name' ? { ...c, visible: false } : c));
+    el.dispatchEvent(new ColumnsRequestEvent(columns));
+    const event = await next;
+
+    expect(event.columns.find((c) => c.key === 'name')!.visible).toBe(false);
+    expect(event.bubbles).toBe(false);
+    await settle(el);
+    expect(shown(host, 'name')).toBe(false);
+  });
+
+  it('reports a new order for the page to render, and never moves a cell itself', async () => {
+    const el = await mount(TABLE());
+    const before = el.querySelector('thead tr')!.innerHTML;
+    const next = waitForEvent(el, 'column-change') as Promise<ColumnChangeEvent>;
+
+    const [sku, name, warehouse, stock] = el.columns;
+    el.dispatchEvent(new ColumnsRequestEvent([sku, stock, name, warehouse]));
+
+    expect((await next).columns.map((c) => c.key)).toEqual(['sku', 'stock', 'name', 'warehouse']);
+    expect(el.querySelector('thead tr')!.innerHTML).toBe(before);
+  });
+
+  it('keeps fixed columns where they are, whatever the request', async () => {
+    const el = await mount(TABLE());
+    const next = waitForEvent(el, 'column-change') as Promise<ColumnChangeEvent>;
+
+    const [sku, name, warehouse, stock] = el.columns;
+    el.dispatchEvent(new ColumnsRequestEvent([name, { ...sku, visible: false }, warehouse, stock]));
+    const event = await next;
+
+    expect(event.columns[0]).toEqual(sku);
+  });
+
+  it('follows the page when it renders the columns in the reported order', async () => {
+    const el = await mount(TABLE());
+    const row = el.querySelector('thead tr')!;
+    row.append(row.querySelector('[data-key="name"]')!);
+    const body = el.querySelector('tbody tr')!;
+    body.append(body.querySelector('.name')!);
+    await settle(el);
+
+    expect(shown(host, 'warehouse')).toBe(false);
+    expect(shown(host, 'name')).toBe(true);
+    expect(shown(host, 'stock')).toBe(true);
+  });
+
+  it('resets to the header’s defaults', async () => {
+    const el = await mount(TABLE());
+    el.columns = el.columns.map((c) => ({ ...c, visible: true }));
+    await settle(el);
+
+    el.resetColumns();
+    await settle(el);
+
+    expect(shown(host, 'warehouse')).toBe(false);
+  });
+});
+
+describe('With persist-key, the user’s columns are kept', () => {
+  it('stores a user change under a key derived from the element and restores it', async () => {
+    let el = await mount(TABLE('persist-key="products"'));
+    const columns = el.columns.map((c) => (c.key === 'name' ? { ...c, visible: false } : c));
+    el.dispatchEvent(new ColumnsRequestEvent(columns));
+    await settle(el);
+
+    expect(JSON.parse(localStorage.getItem('l-data-table:products')!)).toEqual({
+      v: 1,
+      order: ['name', 'warehouse', 'stock'],
+      hidden: ['name', 'warehouse'],
+    });
+
+    host.remove();
+    el = await mount(TABLE('persist-key="products"'));
+    expect(shown(host, 'name')).toBe(false);
+  });
+
+  it('reports a restored order once, so the page can render it', async () => {
+    localStorage.setItem(
+      'l-data-table:products',
+      JSON.stringify({ v: 1, order: ['stock', 'name', 'warehouse'], hidden: [] }),
+    );
+    host = document.createElement('div');
+    host.innerHTML = TABLE('persist-key="products"');
+    const el = host.querySelector<DataTable>('l-data-table')!;
+    const next = waitForEvent(el, 'column-change') as Promise<ColumnChangeEvent>;
+    document.body.append(host);
+
+    expect((await next).columns.map((c) => c.key)).toEqual(['sku', 'stock', 'name', 'warehouse']);
+  });
+
+  it('ignores stored data it cannot read', async () => {
+    localStorage.setItem('l-data-table:products', '{not json');
+    const el = await mount(TABLE('persist-key="products"'));
+
+    expect(el.columns.find((c) => c.key === 'warehouse')!.visible).toBe(false);
+  });
+
+  it('keeps working when storage throws', async () => {
+    const get = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError');
+    });
+    const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError');
+    });
+    const el = await mount(TABLE('persist-key="products"'));
+    const next = waitForEvent(el, 'column-change') as Promise<ColumnChangeEvent>;
+
+    el.dispatchEvent(
+      new ColumnsRequestEvent(
+        el.columns.map(({ key, label, fixed }) => ({ key, label, fixed, visible: true })),
+      ),
+    );
+
+    expect((await next).columns.every((c) => c.visible)).toBe(true);
+    get.mockRestore();
+    set.mockRestore();
+  });
+
+  it('forgets the stored columns on reset', async () => {
+    const el = await mount(TABLE('persist-key="products"'));
+    el.dispatchEvent(
+      new ColumnsRequestEvent(
+        el.columns.map(({ key, label, fixed }) => ({ key, label, fixed, visible: true })),
+      ),
+    );
+    await settle(el);
+
+    el.dispatchEvent(new ColumnsRequestEvent(null));
+    await settle(el);
+
+    expect(localStorage.getItem('l-data-table:products')).toBeNull();
+    expect(shown(host, 'warehouse')).toBe(false);
+  });
+});
+
+describe('The hiding stylesheet stays with the element', () => {
+  it('reaches a table inside a shadow root', async () => {
+    const outer = document.createElement('div');
+    document.body.append(outer);
+    const shadow = outer.attachShadow({ mode: 'open' });
+    await mount(TABLE(), shadow);
+
+    expect(shown(shadow, 'warehouse')).toBe(false);
+    outer.remove();
+  });
+
+  it('is removed with the element', async () => {
+    const el = await mount(TABLE());
+    const sheets = document.adoptedStyleSheets.length;
+
+    el.remove();
+
+    expect(document.adoptedStyleSheets.length).toBe(sheets - 1);
+  });
+});

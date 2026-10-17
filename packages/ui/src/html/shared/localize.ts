@@ -55,6 +55,21 @@ export interface LuxenTranslation {
   // data-table
   selectAllRows?: string;
 
+  // column-manager
+  shownColumns?: string;
+  hiddenColumns?: string;
+  fixedColumns?: string;
+  showColumn?: (label: string) => string;
+  hideColumn?: (label: string) => string;
+  moveColumnUp?: (label: string) => string;
+  moveColumnDown?: (label: string) => string;
+  columnPosition?: (label: string, position: number, total: number) => string;
+  columnShown?: (label: string) => string;
+  columnHidden?: (label: string) => string;
+  resetColumns?: string;
+  columnsReset?: string;
+  dropColumnHere?: string;
+
   // input-stepper
   increaseValue: string;
   decreaseValue: string;
@@ -133,7 +148,7 @@ export function getTranslation(lang: string): LuxenTranslation {
 export function resolveTerm<K extends TermKey>(
   lang: string,
   key: K,
-  ...args: LuxenTranslation[K] extends (...a: infer A) => string ? A : []
+  ...args: NonNullable<LuxenTranslation[K]> extends (...a: infer A) => string ? A : []
 ): string {
   const translation = getTranslation(lang);
   const value = (translation[key] ?? en[key]) as LuxenTranslation[K];
@@ -212,7 +227,7 @@ export class LocalizeController implements ReactiveController {
   /** Resolve a localized term for the host's active language. */
   term<K extends TermKey>(
     key: K,
-    ...args: LuxenTranslation[K] extends (...a: infer A) => string ? A : []
+    ...args: NonNullable<LuxenTranslation[K]> extends (...a: infer A) => string ? A : []
   ): string {
     return resolveTerm(this.lang(), key, ...args);
   }

@@ -45,6 +45,7 @@ Visit https://luxen-ui.com to explore the documentation.
 | Checkbox          | `<input>`               | ⏣ Native HTML Element                   |
 | Close button      | `<button>`              | ⏣ Native HTML Element                   |
 | Color scheme icon | `<l-color-scheme-icon>` | ⬢ Custom HTML Element (with Shadow DOM) |
+| Column manager    | `<l-column-manager>`    | ◇ Custom HTML Element (no Shadow DOM)   |
 | Combobox          | `<l-combobox>`          | ⬢ Custom HTML Element (with Shadow DOM) |
 | Data table        | `<l-data-table>`        | ⬡ Progressive Custom HTML Element       |
 | Dialog            | `<l-dialog>`            | ⬢ Custom HTML Element (with Shadow DOM) |

@@ -18,6 +18,21 @@ const en: LuxenTranslation = {
   // data-table
   selectAllRows: 'Select all rows on this page',
 
+  // column-manager
+  shownColumns: 'Shown columns',
+  hiddenColumns: 'Hidden columns',
+  fixedColumns: 'Fixed columns',
+  showColumn: (label) => `Show column ${label}`,
+  hideColumn: (label) => `Hide column ${label}`,
+  moveColumnUp: (label) => `Move ${label} up`,
+  moveColumnDown: (label) => `Move ${label} down`,
+  columnPosition: (label, position, total) => `${label}, position ${position} of ${total}`,
+  columnShown: (label) => `${label} shown`,
+  columnHidden: (label) => `${label} hidden`,
+  resetColumns: 'Reset columns',
+  columnsReset: 'Columns reset',
+  dropColumnHere: 'Drop a column here',
+
   increaseValue: 'Increase value',
   decreaseValue: 'Decrease value',
 
