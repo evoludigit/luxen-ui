@@ -14,25 +14,14 @@ const columns = [
   { key: 'stock', label: 'In stock', number: true },
 ];
 
-// The table only shows the state; sorting is the page's job. One column at a
-// time, cycling ascending → descending → unsorted.
+// <l-data-table> reports the next sort; the page keeps it and sorts its rows.
 const sort = ref({ key: 'stock', direction: 'descending' });
-
-function toggle(key) {
-  const current = sort.value?.key === key ? sort.value.direction : null;
-  sort.value =
-    current === null
-      ? { key, direction: 'ascending' }
-      : current === 'ascending'
-        ? { key, direction: 'descending' }
-        : null;
-}
 
 const rows = computed(() => {
   if (!sort.value) return products;
   const { key, direction } = sort.value;
   const sign = direction === 'ascending' ? 1 : -1;
-  return [...products].toSorted((a, b) =>
+  return products.toSorted((a, b) =>
     typeof a[key] === 'number' ? sign * (a[key] - b[key]) : sign * a[key].localeCompare(b[key]),
   );
 });
@@ -45,38 +34,36 @@ const format = new Intl.NumberFormat('en');
     class="vp-raw component-wrapper bg-surface-sunken"
     style="padding-block: 24px; padding-inline: 12px"
   >
-    <table class="l-table">
-      <caption>
-        Products
-      </caption>
-      <thead>
-        <tr>
-          <th
-            v-for="column in columns"
-            :key="column.key"
-            scope="col"
-            :data-type="column.number ? 'number' : null"
-            :aria-sort="sort?.key === column.key ? sort.direction : null"
-          >
-            <button
-              type="button"
-              @click="toggle(column.key)"
+    <l-data-table @sort-change="sort = $event.sort">
+      <table class="l-table">
+        <caption>
+          Products
+        </caption>
+        <thead>
+          <tr>
+            <th
+              v-for="column in columns"
+              :key="column.key"
+              scope="col"
+              :data-key="column.key"
+              :data-type="column.number ? 'number' : null"
+              :aria-sort="sort?.key === column.key ? sort.direction : null"
             >
-              {{ column.label }}
-            </button>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="product in rows"
-          :key="product.sku"
-        >
-          <th scope="row">{{ product.sku }}</th>
-          <td>{{ product.name }}</td>
-          <td data-type="number">{{ format.format(product.stock) }}</td>
-        </tr>
-      </tbody>
-    </table>
+              <button type="button">{{ column.label }}</button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="product in rows"
+            :key="product.sku"
+          >
+            <th scope="row">{{ product.sku }}</th>
+            <td>{{ product.name }}</td>
+            <td data-type="number">{{ format.format(product.stock) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </l-data-table>
   </div>
 </template>
