@@ -175,6 +175,36 @@ The element fires `selection-change` with `selectedKeys`, the inputs' `value`s. 
 <<< @/.vitepress/examples/table/SelectableRows.html [HTML]
 :::
 
+### Columns the user picks
+
+Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` for the page to render. Add `persist-key` to keep the user's columns between visits.
+
+<ColumnManagerDemo />
+
+::: details Code
+::: code-group
+<<< @/.vitepress/components/ColumnManagerDemo.vue [Vue]
+:::
+
+Place the manager where it fits, in an `l-popover` for instance:
+
+```html
+<button
+  class="l-button"
+  id="columns-trigger"
+>
+  Columns
+</button>
+<l-popover for="columns-trigger">
+  <l-column-manager for="products"></l-column-manager>
+</l-popover>
+<l-data-table
+  id="products"
+  persist-key="products"
+  >…</l-data-table
+>
+```
+
 ### Row link
 
 Add `data-row-link` to the link in a row's header cell: a click anywhere in the row follows it, and it stays a real link — keyboard, middle-click, open in a new tab. The row's other controls and its selection cell stay clickable. Only a linked row is tinted under the pointer, since a hover tint promises a click.
@@ -295,6 +325,7 @@ table.addEventListener('selection-change', (e) => update(e.selectedKeys));
   { Check: 'Row link', Description: 'The row link is a real `<a>`: listed among the page links, reachable by `Tab`, opened with `Enter`', WCAG: '[WCAG 2.1.1](https://www.w3.org/WAI/WCAG22/Understanding/keyboard), [WCAG 2.4.4](https://www.w3.org/WAI/WCAG22/Understanding/link-purpose-in-context), [RGAA 6.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#6.1), [RGAA 7.3](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.3)' },
   { Check: 'Sort glyph', Description: 'The direction glyph of an unsorted column uses the tertiary text color, above 3:1 against the surface in both schemes', WCAG: '[WCAG 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast), [RGAA 3.3](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#3.3)' },
   { Check: 'Header checkbox', Description: 'The checkbox `l-data-table` adds is named in the page language and reports a mixed state while some rows are selected; it exists only once the script runs, so there is never a control that does nothing', WCAG: '[WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1)' },
+  { Check: 'Column manager', Description: 'Lists are named; every eye and move button is named after its column; moves have buttons besides drag and drop; changes are announced in a polite live region', WCAG: '[WCAG 2.5.7](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements), [WCAG 4.1.3](https://www.w3.org/WAI/WCAG22/Understanding/status-messages), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1), [RGAA 7.5](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.5)' },
   { Check: 'Focus ring', Description: 'Header buttons and the row link show the Luxen focus ring', WCAG: '[WCAG 2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible), [RGAA 10.7](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#10.7)' },
 ]" :rules="[
   'Name the table with a `&lt;caption&gt;` or `aria-label`',
@@ -312,6 +343,7 @@ table.addEventListener('selection-change', (e) => update(e.selectedKeys));
   { Key: 'Space', Description: 'Activates the focused header button or toggles the focused checkbox' },
   { Key: 'Shift + Space', Description: 'With `l-data-table selectable`: gives every row from the last toggled one to the focused one the same state' },
   { Key: 'Shift + click', Description: 'Same, with the pointer' },
+  { Key: 'Alt + ↑ / ↓', Description: 'In `l-column-manager`: moves the focused column up or down among the shown ones' },
 ]" />
 
 ## API reference
@@ -323,10 +355,12 @@ table.addEventListener('selection-change', (e) => update(e.selectedKeys));
 ```css [CSS]
 @import 'luxen-ui/css/table/lines'; /* or table/grid */
 @import 'luxen-ui/css/data-table';
+@import 'luxen-ui/css/column-manager';
 ```
 
 ```js [JS]
 import 'luxen-ui/data-table';
+import 'luxen-ui/column-manager';
 ```
 
 :::
@@ -352,3 +386,9 @@ The CSS covers the table itself; the JS import upgrades `l-data-table` with sort
 <ApiTable element="data-table" section="events" />
 
 <ApiTable element="data-table" section="methods" />
+
+### Column manager
+
+<ApiTable element="column-manager" section="properties" />
+
+<ApiTable element="column-manager" section="cssClasses" />

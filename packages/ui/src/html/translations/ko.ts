@@ -18,6 +18,21 @@ const ko: LuxenTranslation = {
   // data-table
   selectAllRows: '이 페이지의 모든 행 선택',
 
+  // column-manager
+  shownColumns: '표시된 열',
+  hiddenColumns: '숨겨진 열',
+  fixedColumns: '고정된 열',
+  showColumn: (label) => `${label} 열 표시`,
+  hideColumn: (label) => `${label} 열 숨기기`,
+  moveColumnUp: (label) => `${label} 위로 이동`,
+  moveColumnDown: (label) => `${label} 아래로 이동`,
+  columnPosition: (label, position, total) => `${label}, ${total}개 중 ${position}번째`,
+  columnShown: (label) => `${label} 표시됨`,
+  columnHidden: (label) => `${label} 숨겨짐`,
+  resetColumns: '열 초기화',
+  columnsReset: '열이 초기화됨',
+  dropColumnHere: '여기에 열을 놓으세요',
+
   increaseValue: '값 늘리기',
   decreaseValue: '값 줄이기',
 
