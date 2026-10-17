@@ -506,6 +506,18 @@ describe('Appearances', () => {
     expect(style(cell('.b2')).borderBottomRightRadius).not.toBe('0px');
   });
 
+  it('draws a single rule above the totals in a grid', () => {
+    mount(`
+      <table class="l-table" data-appearance="grid">
+        <thead><tr><th scope="col">SKU</th><th scope="col">Stock</th></tr></thead>
+        <tbody><tr><th scope="row" class="last">SKU-1</th><td>3</td></tr></tbody>
+        <tfoot><tr><th scope="row" class="total">Total</th><td>3</td></tr></tfoot>
+      </table>`);
+
+    expect(style(cell('.last')).borderBottomWidth).toBe('0px');
+    expect(style(cell('.total')).borderTopWidth).toBe('1px');
+  });
+
   it('applies each appearance only where it is asked, with both imported', () => {
     mount(`${PLAIN()}${PLAIN('data-appearance="grid"').replace(/class="a1"/, 'class="g1"')}`);
 

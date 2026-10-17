@@ -21,7 +21,10 @@
       border-inline-end: 0;
     }
 
-    & > :is(tbody, tfoot):last-child > tr:last-child > :where(th, td) {
+    /* The last body row loses its rule under totals too: the totals row
+       draws its own, stronger one above. */
+    & > tbody:last-of-type > tr:last-child > :where(th, td),
+    & > tfoot > tr:last-child > :where(th, td) {
       border-block-end: 0;
     }
 
