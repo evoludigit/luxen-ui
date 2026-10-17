@@ -5,6 +5,10 @@
  *
  * Fixed columns never move and never hide; the others are reordered among
  * themselves, the fixed ones keeping their declared places.
+ *
+ * Outside the element, the state travels in TanStack Table's shapes
+ * (`ColumnOrderState`, `ColumnVisibilityState`), stored ones included, so a page
+ * can hand it to TanStack or keep what it already stores in that form.
  */
 
 export interface ColumnDeclaration {
@@ -21,11 +25,20 @@ export interface Column {
   readonly visible: boolean;
 }
 
-/** Stored preferences. `order` and `hidden` list movable columns only. */
-export interface StoredColumns {
+/** Column keys in display order, as TanStack Table's `ColumnOrderState`. */
+export type ColumnOrderState = readonly string[];
+
+/** Visibility by column key, as TanStack Table's `ColumnVisibilityState`: a missing key is visible. */
+export type ColumnVisibilityState = Readonly<Record<string, boolean>>;
+
+export interface ColumnPreferences {
+  readonly columnOrder: ColumnOrderState;
+  readonly columnVisibility: ColumnVisibilityState;
+}
+
+/** Stored preferences: the two states under a format version. */
+export interface StoredColumns extends ColumnPreferences {
   readonly v: 1;
-  readonly order: readonly string[];
-  readonly hidden: readonly string[];
 }
 
 export function fromHeaders(declarations: readonly ColumnDeclaration[]): Column[] {
@@ -66,23 +79,27 @@ export function setVisible(
 }
 
 /**
- * Applies stored preferences to the columns the header declares now. Stored
- * keys the header no longer has are dropped; a declared column the store does
- * not know keeps its declared visibility and sits after its declared predecessor.
+ * Applies preferences to the columns the header declares now. Keys the header
+ * no longer has are dropped, and fixed columns keep their place and stay
+ * visible. A declared column the order does not list keeps its declared
+ * visibility and sits after its declared predecessor; one it lists but the
+ * visibility map leaves out is visible, as in TanStack Table.
  */
 export function merge(
   declared: readonly Column[],
-  stored: StoredColumns | null,
+  preferences: ColumnPreferences | null,
 ): readonly Column[] {
-  if (!stored) return declared;
+  if (!preferences) return declared;
   const movable = declared.filter((c) => !c.fixed);
   const byKey = new Map(movable.map((c) => [c.key, c]));
-  const hidden = new Set(stored.hidden);
-  const known = new Set(stored.order.filter((key) => byKey.has(key)));
+  const order = preferences.columnOrder;
+  // A key the map leaves out is visible, as in TanStack Table.
+  const visibility: Readonly<Partial<Record<string, boolean>>> = preferences.columnVisibility;
+  const known = new Set(order.filter((key) => byKey.has(key)));
 
   const ordered: Column[] = [...known].map((key) => {
     const { label, fixed } = byKey.get(key)!;
-    return { key, label, fixed, visible: !hidden.has(key) };
+    return { key, label, fixed, visible: visibility[key] ?? true };
   });
   movable.forEach((column, i) => {
     if (known.has(column.key)) return;
@@ -93,17 +110,26 @@ export function merge(
   return interleave(declared, ordered);
 }
 
+export function columnOrder(columns: readonly Column[]): ColumnOrderState {
+  return columns.map((c) => c.key);
+}
+
+export function columnVisibility(columns: readonly Column[]): ColumnVisibilityState {
+  return Object.fromEntries(columns.map((c) => [c.key, c.visible]));
+}
+
 export function encode(columns: readonly Column[]): StoredColumns {
-  const movable = columns.filter((c) => !c.fixed);
-  return {
-    v: 1,
-    order: movable.map((c) => c.key),
-    hidden: movable.filter((c) => !c.visible).map((c) => c.key),
-  };
+  return { v: 1, columnOrder: columnOrder(columns), columnVisibility: columnVisibility(columns) };
 }
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+const isVisibilityMap = (value: unknown): value is Record<string, boolean> =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.values(value).every((item) => typeof item === 'boolean');
 
 /** Parses stored preferences; anything that is not the current format is `null`. */
 export function decode(raw: string | null): StoredColumns | null {
@@ -115,9 +141,9 @@ export function decode(raw: string | null): StoredColumns | null {
     return null;
   }
   if (typeof value !== 'object' || value === null) return null;
-  const { v, order, hidden } = value as Record<string, unknown>;
-  if (v !== 1 || !isStringArray(order) || !isStringArray(hidden)) return null;
-  return { v, order, hidden };
+  const { v, columnOrder: order, columnVisibility: visibility } = value as Record<string, unknown>;
+  if (v !== 1 || !isStringArray(order) || !isVisibilityMap(visibility)) return null;
+  return { v, columnOrder: order, columnVisibility: visibility };
 }
 
 /** 1-based `:nth-child` indices of hidden keys; unkeyed header cells count too. */

@@ -71,6 +71,13 @@ describe('Columns come from the header', () => {
     ]);
   });
 
+  it('states the order and visibility in TanStack Table’s shapes', async () => {
+    const el = await mount(TABLE());
+
+    expect(el.columnOrder).toEqual(['sku', 'name', 'warehouse', 'stock']);
+    expect(el.columnVisibility).toEqual({ sku: true, name: true, warehouse: false, stock: true });
+  });
+
   it('hides a data-hidden column, header and cells, without touching them', async () => {
     const el = await mount(TABLE());
 
@@ -86,11 +93,24 @@ describe('The page sets columns, the user changes them', () => {
     const listener = vi.fn();
     el.addEventListener('column-change', listener);
 
-    el.columns = el.columns.map((c) => ({ ...c, visible: c.key !== 'name' || c.fixed }));
+    el.columnVisibility = { name: false, warehouse: true };
     await settle(el);
 
     expect(shown(host, 'name')).toBe(false);
     expect(shown(host, 'warehouse')).toBe(true);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('applies an order set by the page without reporting it', async () => {
+    const el = await mount(TABLE());
+    const listener = vi.fn();
+    el.addEventListener('column-change', listener);
+
+    el.columnOrder = ['stock', 'sku', 'name', 'warehouse'];
+    await settle(el);
+
+    // The fixed column keeps its place; the others take the requested order.
+    expect(el.columnOrder).toEqual(['sku', 'stock', 'name', 'warehouse']);
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -102,7 +122,7 @@ describe('The page sets columns, the user changes them', () => {
     el.dispatchEvent(new ColumnsRequestEvent(columns));
     const event = await next;
 
-    expect(event.columns.find((c) => c.key === 'name')!.visible).toBe(false);
+    expect(event.columnVisibility.name).toBe(false);
     expect(event.bubbles).toBe(false);
     await settle(el);
     expect(shown(host, 'name')).toBe(false);
@@ -116,7 +136,7 @@ describe('The page sets columns, the user changes them', () => {
     const [sku, name, warehouse, stock] = el.columns;
     el.dispatchEvent(new ColumnsRequestEvent([sku, stock, name, warehouse]));
 
-    expect((await next).columns.map((c) => c.key)).toEqual(['sku', 'stock', 'name', 'warehouse']);
+    expect((await next).columnOrder).toEqual(['sku', 'stock', 'name', 'warehouse']);
     expect(el.querySelector('thead tr')!.innerHTML).toBe(before);
   });
 
@@ -128,7 +148,8 @@ describe('The page sets columns, the user changes them', () => {
     el.dispatchEvent(new ColumnsRequestEvent([name, { ...sku, visible: false }, warehouse, stock]));
     const event = await next;
 
-    expect(event.columns[0]).toEqual(sku);
+    expect(event.columnOrder[0]).toBe(sku.key);
+    expect(event.columnVisibility.sku).toBe(true);
   });
 
   it('follows the page when it renders the columns in the reported order', async () => {
@@ -146,7 +167,7 @@ describe('The page sets columns, the user changes them', () => {
 
   it('resets to the header’s defaults', async () => {
     const el = await mount(TABLE());
-    el.columns = el.columns.map((c) => ({ ...c, visible: true }));
+    el.columnVisibility = { warehouse: true };
     await settle(el);
 
     el.resetColumns();
@@ -165,8 +186,8 @@ describe('With persist-key, the user’s columns are kept', () => {
 
     expect(JSON.parse(localStorage.getItem('l-data-table:products')!)).toEqual({
       v: 1,
-      order: ['name', 'warehouse', 'stock'],
-      hidden: ['name', 'warehouse'],
+      columnOrder: ['sku', 'name', 'warehouse', 'stock'],
+      columnVisibility: { sku: true, name: false, warehouse: false, stock: true },
     });
 
     host.remove();
@@ -177,7 +198,11 @@ describe('With persist-key, the user’s columns are kept', () => {
   it('reports a restored order once, so the page can render it', async () => {
     localStorage.setItem(
       'l-data-table:products',
-      JSON.stringify({ v: 1, order: ['stock', 'name', 'warehouse'], hidden: [] }),
+      JSON.stringify({
+        v: 1,
+        columnOrder: ['sku', 'stock', 'name', 'warehouse'],
+        columnVisibility: { warehouse: false },
+      }),
     );
     host = document.createElement('div');
     host.innerHTML = TABLE('persist-key="products"');
@@ -185,14 +210,14 @@ describe('With persist-key, the user’s columns are kept', () => {
     const next = waitForEvent(el, 'column-change') as Promise<ColumnChangeEvent>;
     document.body.append(host);
 
-    expect((await next).columns.map((c) => c.key)).toEqual(['sku', 'stock', 'name', 'warehouse']);
+    expect((await next).columnOrder).toEqual(['sku', 'stock', 'name', 'warehouse']);
   });
 
   it('ignores stored data it cannot read', async () => {
     localStorage.setItem('l-data-table:products', '{not json');
     const el = await mount(TABLE('persist-key="products"'));
 
-    expect(el.columns.find((c) => c.key === 'warehouse')!.visible).toBe(false);
+    expect(el.columnVisibility.warehouse).toBe(false);
   });
 
   it('keeps working when storage throws', async () => {
@@ -211,7 +236,7 @@ describe('With persist-key, the user’s columns are kept', () => {
       ),
     );
 
-    expect((await next).columns.every((c) => c.visible)).toBe(true);
+    expect(Object.values((await next).columnVisibility).every(Boolean)).toBe(true);
     get.mockRestore();
     set.mockRestore();
   });

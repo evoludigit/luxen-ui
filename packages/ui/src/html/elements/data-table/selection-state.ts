@@ -9,6 +9,18 @@
  */
 
 export type SelectionMode = 'multiple' | 'single';
+
+/** Selected row keys, as TanStack Table's `RowSelectionState`. */
+export type RowSelectionState = Readonly<Record<string, boolean>>;
+
+export function toRowSelection(keys: readonly string[]): RowSelectionState {
+  return Object.fromEntries(keys.map((key) => [key, true]));
+}
+
+/** The keys a `RowSelectionState` selects: TanStack may keep deselected keys as `false`. */
+export function selectedKeys(selection: RowSelectionState): string[] {
+  return Object.keys(selection).filter((key) => selection[key]);
+}
 export type HeaderState = 'none' | 'some' | 'all';
 
 export class SelectionState {

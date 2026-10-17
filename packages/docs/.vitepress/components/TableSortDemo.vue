@@ -14,17 +14,25 @@ const columns = [
   { key: 'stock', label: 'In stock', number: true },
 ];
 
-// <l-data-table> reports the next sort; the page keeps it and sorts its rows.
-const sort = ref({ key: 'stock', direction: 'descending' });
+// <l-data-table> reports the next sort as TanStack Table's SortingState; the
+// page keeps it and sorts its rows.
+const sorting = ref([{ id: 'stock', desc: true }]);
 
 const rows = computed(() => {
-  if (!sort.value) return products;
-  const { key, direction } = sort.value;
-  const sign = direction === 'ascending' ? 1 : -1;
+  const [sorted] = sorting.value;
+  if (!sorted) return products;
+  const { id, desc } = sorted;
+  const sign = desc ? -1 : 1;
   return products.toSorted((a, b) =>
-    typeof a[key] === 'number' ? sign * (a[key] - b[key]) : sign * a[key].localeCompare(b[key]),
+    typeof a[id] === 'number' ? sign * (a[id] - b[id]) : sign * a[id].localeCompare(b[id]),
   );
 });
+
+const ariaSort = (key) => {
+  const [sorted] = sorting.value;
+  if (sorted?.id !== key) return null;
+  return sorted.desc ? 'descending' : 'ascending';
+};
 
 const format = new Intl.NumberFormat('en');
 </script>
@@ -34,7 +42,7 @@ const format = new Intl.NumberFormat('en');
     class="vp-raw component-wrapper bg-surface-sunken"
     style="padding-block: 24px; padding-inline: 12px"
   >
-    <l-data-table @sort-change="sort = $event.sort">
+    <l-data-table @sort-change="sorting = $event.sorting">
       <table class="l-table">
         <caption>
           Products
@@ -47,7 +55,7 @@ const format = new Intl.NumberFormat('en');
               scope="col"
               :data-key="column.key"
               :data-type="column.number ? 'number' : null"
-              :aria-sort="sort?.key === column.key ? sort.direction : null"
+              :aria-sort="ariaSort(column.key)"
             >
               <button type="button">{{ column.label }}</button>
             </th>

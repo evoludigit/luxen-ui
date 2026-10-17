@@ -83,12 +83,7 @@ describe('The manager lists the table’s columns', () => {
   it('follows changes the page makes to the table', async () => {
     const table = await mount();
 
-    table.columns = table.columns.map(({ key, label, fixed }) => ({
-      key,
-      label,
-      fixed,
-      visible: true,
-    }));
+    table.columnVisibility = Object.fromEntries(table.columnOrder.map((key) => [key, true]));
     await settle();
 
     expect(items('Hidden columns')).toEqual([]);

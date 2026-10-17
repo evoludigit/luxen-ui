@@ -1,7 +1,11 @@
 // oxlint-disable-next-line typescript/triple-slash-reference -- required: test files aren't in any tsconfig include.
 /// <reference path="./vitest.d.ts" />
 import { describe, expect, it } from 'vitest';
-import { SelectionState } from '../src/html/elements/data-table/selection-state.js';
+import {
+  SelectionState,
+  selectedKeys,
+  toRowSelection,
+} from '../src/html/elements/data-table/selection-state.js';
 
 const VISIBLE = ['a', 'b', 'c', 'd', 'e'];
 
@@ -194,5 +198,18 @@ describe('"All matching" stands for rows beyond the page', () => {
     const s = new SelectionState('single');
     s.allMatching = true;
     expect(s.allMatching).toBe(false);
+  });
+});
+
+describe('The selection is reported as TanStack Table’s RowSelectionState', () => {
+  it('maps each selected key to true', () => {
+    expect(toRowSelection(['sku-1', 'sku-3'])).toEqual({ 'sku-1': true, 'sku-3': true });
+  });
+
+  it('reads back the keys set to true, ignoring the false ones TanStack may leave', () => {
+    expect(selectedKeys({ 'sku-1': true, 'sku-2': false, 'sku-3': true })).toEqual([
+      'sku-1',
+      'sku-3',
+    ]);
   });
 });
