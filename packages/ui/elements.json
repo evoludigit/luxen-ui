@@ -367,6 +367,15 @@
       "appearances": ["lines", "grid"]
     },
     {
+      "name": "data-table",
+      "displayName": "Data table",
+      "kind": "element",
+      "type": "progressive",
+      "inSkill": false,
+      "inMockups": false,
+      "subItemOf": "table"
+    },
+    {
       "name": "tabs",
       "displayName": "Tabs",
       "kind": "element",

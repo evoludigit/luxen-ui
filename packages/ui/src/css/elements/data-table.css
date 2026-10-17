@@ -1,0 +1,12 @@
+@layer components {
+  /**
+   * Data table — `<l-data-table>` around a `.l-table`.
+   *
+   * No visuals of its own: the table's look is `.l-table`'s, and the header
+   * checkbox the element may add is a `.l-checkbox`. The host only stops being
+   * an inline box around a table.
+   */
+  l-data-table {
+    display: block;
+  }
+}

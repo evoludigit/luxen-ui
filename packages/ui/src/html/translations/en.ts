@@ -15,6 +15,9 @@ const en: LuxenTranslation = {
 
   showPassword: 'Show password',
 
+  // data-table
+  selectAllRows: 'Select all rows on this page',
+
   increaseValue: 'Increase value',
   decreaseValue: 'Decrease value',
 

@@ -37,6 +37,7 @@ Visit https://luxen-ui.com to explore the documentation.
 | Close button      | `<button>`              | ⏣ Native HTML Element                   |
 | Color scheme icon | `<l-color-scheme-icon>` | ⬢ Custom HTML Element (with Shadow DOM) |
 | Combobox          | `<l-combobox>`          | ⬢ Custom HTML Element (with Shadow DOM) |
+| Data table        | `<l-data-table>`        | ⬡ Progressive Custom HTML Element       |
 | Dialog            | `<l-dialog>`            | ⬢ Custom HTML Element (with Shadow DOM) |
 | Disclosure        | `<details>`             | ⏣ Native HTML Element                   |
 | Divider           | `<l-divider>`           | ◇ Custom HTML Element (no Shadow DOM)   |
