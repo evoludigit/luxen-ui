@@ -8,6 +8,7 @@ export type ElementBaseName =
   | 'carousel'
   | 'carousel-item'
   | 'combobox'
+  | 'column-manager'
   | 'data-table'
   | 'dialog'
   | 'divider'

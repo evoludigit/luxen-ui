@@ -1,11 +1,21 @@
 import { property } from 'lit/decorators.js';
 import { LuxenElement } from '../../shared/luxen-element.js';
 import { LocalizeController } from '../../shared/localize.js';
-import { cls } from '../../registry.js';
+import { cls, getPrefix } from '../../registry.js';
 import { nextSort, sortFromHeaders, type SortEntry } from './sort-state.js';
 import { SelectionState } from './selection-state.js';
+import {
+  decode,
+  encode,
+  fromHeaders,
+  hiddenIndices,
+  merge,
+  type Column,
+  type ColumnDeclaration,
+} from './column-state.js';
 
 export type { SortDirection, SortEntry } from './sort-state.js';
+export type { Column } from './column-state.js';
 
 /**
  * Fired when a sortable header's button is activated. Reports the sort the page
@@ -42,12 +52,47 @@ export class DataTableSelectionChangeEvent extends Event {
   }
 }
 
+/**
+ * Fired when the columns change through the user (a column manager), a reset
+ * from it, or preferences restored from `persist-key`. Not fired when the page
+ * sets `columns` or calls `resetColumns()`. The page renders `columns` in this
+ * order; hiding is applied by the element.
+ */
+export class ColumnChangeEvent extends Event {
+  readonly columns: readonly Column[];
+  constructor(columns: readonly Column[]) {
+    super('column-change', { bubbles: false, composed: false, cancelable: false });
+    this.columns = columns;
+  }
+}
+
+declare global {
+  interface GlobalEventHandlersEventMap {
+    'column-change': ColumnChangeEvent;
+  }
+}
+
+/**
+ * Internal contract: a column manager asks the table to apply the user's
+ * columns (`null` = reset to the header's defaults). Not public API.
+ */
+export class ColumnsRequestEvent extends Event {
+  readonly columns: readonly Column[] | null;
+  constructor(columns: readonly Column[] | null) {
+    super('columns-request', { bubbles: false, composed: false, cancelable: false });
+    this.columns = columns;
+  }
+}
+
 interface DataTableEventMap {
   'selection-change': DataTableSelectionChangeEvent;
 }
 
+let scopes = 0;
+
 const ROW_INPUTS = ':scope > table > tbody > tr > [data-select] input';
 const HEADER_SELECT = ':scope > table > thead > tr > [data-select]';
+const HEADER_ROW = ':scope > table > thead > tr';
 
 /**
  * @summary Adds sorting and row selection to the `.l-table` it wraps, leaving rendering to the page.
@@ -62,6 +107,11 @@ const HEADER_SELECT = ':scope > table > thead > tr > [data-select]';
  * nothing; an authored one is used as is.
  *
  * Do not bind `checked` on the row inputs: set `selectedKeys` instead.
+ *
+ * Columns are the keyed headers (`th[data-key]`, `data-fixed`, `data-hidden`).
+ * The element hides columns with a stylesheet of its own and reports order
+ * changes in `column-change` for the page to render; it never moves a cell.
+ * With `persist-key`, the user's columns are kept in `localStorage`.
  *
  * @example
  * ```html
@@ -86,6 +136,7 @@ const HEADER_SELECT = ':scope > table > thead > tr > [data-select]';
  *
  * @event sort-change - Fired when a sortable header is activated. Not cancelable. Properties: `sort: { key, direction } | null`.
  * @event selection-change - Fired when the user changes the selection. Not cancelable. Properties: `selectedKeys: string[]`, `allMatching: boolean`, `allVisibleSelected: boolean`.
+ * @event column-change - Fired when the user changes the columns, or stored ones are restored. Not cancelable. Properties: `columns: { key, label, fixed, visible }[]`.
  *
  * @customElement l-data-table
  */
@@ -100,6 +151,18 @@ export class DataTable extends LuxenElement {
   /** Turns on row selection through the native inputs in `[data-select]` cells. */
   @property({ type: Boolean, reflect: true })
   selectable = false;
+
+  /** Keeps the user's column order and visibility in `localStorage` under this name. */
+  @property({ attribute: 'persist-key', reflect: true })
+  persistKey?: string;
+
+  /** The header's columns as first seen, plus any added since: what a reset restores. */
+  private _defaults: Column[] | null = null;
+  private _columns: readonly Column[] = [];
+  private _sheet: CSSStyleSheet | null = null;
+  private _sheetRoot: Document | ShadowRoot | null = null;
+  private _sheetText = '';
+  private readonly _scope = String(++scopes);
 
   private _selection = new SelectionState('multiple');
   private _observer: MutationObserver | null = null;
@@ -150,6 +213,20 @@ export class DataTable extends LuxenElement {
     this._queueSync();
   }
 
+  /** Column order and visibility. Setting it applies without an event. */
+  get columns(): readonly Column[] {
+    return this._columns;
+  }
+
+  set columns(columns: readonly Column[]) {
+    this._applyColumns(columns);
+  }
+
+  /** Restores the header's default columns. No event; stored columns stay. */
+  resetColumns(): void {
+    this._applyColumns(null);
+  }
+
   // --- Lifecycle ---
 
   override connectedCallback() {
@@ -157,6 +234,8 @@ export class DataTable extends LuxenElement {
     this.addEventListener('click', this._onClick);
     this.addEventListener('change', this._onChange);
     this.addEventListener('keydown', this._onKeyDown);
+    this.addEventListener('columns-request', this._onColumnsRequest);
+    this.dataset.columnScope = this._scope;
     // Children may not be parsed yet when the element upgrades mid-parse: try
     // synchronously, then retry once on a macrotask (rAF is suspended in hidden
     // documents). The observer also covers a table inserted later.
@@ -174,6 +253,8 @@ export class DataTable extends LuxenElement {
     this.removeEventListener('click', this._onClick);
     this.removeEventListener('change', this._onChange);
     this.removeEventListener('keydown', this._onKeyDown);
+    this.removeEventListener('columns-request', this._onColumnsRequest);
+    this._releaseSheet();
   }
 
   // LocalizeController requests an update when the language changes.
@@ -208,9 +289,13 @@ export class DataTable extends LuxenElement {
     return inputs.map((input) => input.value);
   }
 
-  /** Brings the inputs in line with the selection; writes only what differs. */
   private _sync() {
-    if (!this.selectable) return;
+    this._syncColumns();
+    if (this.selectable) this._syncSelection();
+  }
+
+  /** Brings the inputs in line with the selection; writes only what differs. */
+  private _syncSelection() {
     const inputs = this._rowInputs();
     const mode = inputs[0]?.type === 'radio' ? 'single' : 'multiple';
     if (mode !== this._selection.mode) {
@@ -247,6 +332,131 @@ export class DataTable extends LuxenElement {
     cell.append(input);
     this._added = input;
     return input;
+  }
+
+  // --- Columns ---
+
+  private _declarations(): ColumnDeclaration[] {
+    const row = this.querySelector(HEADER_ROW);
+    if (!row) return [];
+    return [...row.querySelectorAll<HTMLElement>(':scope > th[data-key]')].map((th) => ({
+      key: th.dataset.key!,
+      label: (th.getAttribute('aria-label') ?? th.textContent ?? '').trim(),
+      fixed: th.hasAttribute('data-fixed'),
+      hidden: th.hasAttribute('data-hidden'),
+    }));
+  }
+
+  private get _storageKey(): string | null {
+    return this.persistKey ? `${getPrefix().element}-data-table:${this.persistKey}` : null;
+  }
+
+  /** Keeps defaults and columns in step with the header the page renders. */
+  private _syncColumns() {
+    const declarations = this._declarations();
+    if (declarations.length === 0) return;
+    const first = this._defaults === null;
+    const known = new Map((this._defaults ?? []).map((c) => [c.key, c]));
+    const present = new Set(declarations.map((d) => d.key));
+    // Defaults keep their first-seen order; labels follow the page (a locale
+    // change), and columns the page adds later join at the end.
+    this._defaults = [
+      ...(this._defaults ?? []).filter((c) => present.has(c.key)),
+      ...fromHeaders(declarations.filter((d) => !known.has(d.key))),
+    ];
+    const labels = new Map(declarations.map((d) => [d.key, d.label]));
+    this._defaults = this._defaults.map((c) => ({ ...c, label: labels.get(c.key) ?? c.label }));
+
+    if (first) {
+      const stored = this._read();
+      this._setColumns(merge(this._defaults, stored));
+      if (stored && JSON.stringify(this._columns) !== JSON.stringify(this._defaults)) {
+        queueMicrotask(() => this.dispatchEvent(new ColumnChangeEvent(this._columns)));
+      }
+    } else {
+      this._setColumns(merge(this._defaults, encode(this._columns)));
+    }
+  }
+
+  /**
+   * Applies columns and, when they differ, tells a column manager through the
+   * internal `columns-update` event — a page setting `columns` fires no public
+   * event, but the manager must still follow.
+   */
+  private _setColumns(columns: readonly Column[]) {
+    const changed = JSON.stringify(columns) !== JSON.stringify(this._columns);
+    this._columns = columns;
+    this._applyHiding();
+    if (changed) this.dispatchEvent(new Event('columns-update'));
+  }
+
+  /** Normalises requested columns against the header: unknown keys dropped, fixed ones kept. */
+  private _applyColumns(columns: readonly Column[] | null) {
+    if (!this._defaults) this._syncColumns();
+    if (!this._defaults) return;
+    this._setColumns(columns === null ? this._defaults : merge(this._defaults, encode(columns)));
+  }
+
+  private _onColumnsRequest = (e: Event) => {
+    const { columns } = e as ColumnsRequestEvent;
+    this._applyColumns(columns);
+    this._write(columns === null ? null : this._columns);
+    this.dispatchEvent(new ColumnChangeEvent(this._columns));
+  };
+
+  private _read() {
+    const key = this._storageKey;
+    if (!key) return null;
+    try {
+      return decode(localStorage.getItem(key));
+    } catch {
+      return null;
+    }
+  }
+
+  private _write(columns: readonly Column[] | null) {
+    const key = this._storageKey;
+    if (!key) return;
+    try {
+      if (columns === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(encode(columns)));
+    } catch {
+      // Storage refused (private mode, quota): the columns still apply for this page.
+    }
+  }
+
+  /** One stylesheet on the element's own root — document or shadow root (spike S5). */
+  private _applyHiding() {
+    const row = this.querySelector(HEADER_ROW);
+    const hidden = new Set(this._columns.filter((c) => !c.visible).map((c) => c.key));
+    const keys = row
+      ? [...row.children].map((cell) => (cell as HTMLElement).dataset.key ?? null)
+      : [];
+    const scope = `[data-column-scope="${this._scope}"] > table > :is(thead, tbody, tfoot) > tr`;
+    const text = hiddenIndices(keys, hidden)
+      .map((i) => `${scope} > :nth-child(${i}) { display: none; }`)
+      .join('\n');
+    if (text === this._sheetText) return;
+    this._sheetText = text;
+    if (!this._sheet) {
+      const root = this.getRootNode() as Document | ShadowRoot;
+      if (!('adoptedStyleSheets' in root)) return;
+      this._sheet = new CSSStyleSheet();
+      this._sheetRoot = root;
+      root.adoptedStyleSheets = [...root.adoptedStyleSheets, this._sheet];
+    }
+    this._sheet.replaceSync(text);
+  }
+
+  private _releaseSheet() {
+    if (this._sheet && this._sheetRoot) {
+      this._sheetRoot.adoptedStyleSheets = this._sheetRoot.adoptedStyleSheets.filter(
+        (sheet) => sheet !== this._sheet,
+      );
+    }
+    this._sheet = null;
+    this._sheetRoot = null;
+    this._sheetText = '';
   }
 
   private _warnIfUnnamed(input: HTMLInputElement) {

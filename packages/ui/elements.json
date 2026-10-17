@@ -376,6 +376,15 @@
       "subItemOf": "table"
     },
     {
+      "name": "column-manager",
+      "displayName": "Column manager",
+      "kind": "element",
+      "type": "custom",
+      "inSkill": false,
+      "inMockups": false,
+      "subItemOf": "table"
+    },
+    {
       "name": "tabs",
       "displayName": "Tabs",
       "kind": "element",
