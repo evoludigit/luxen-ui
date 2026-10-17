@@ -22,6 +22,6 @@ export default defineA11yFixture({
   name: 'pagination',
   states: {
     default: NAV('<a href="#page-1" data-step="previous">Previous</a>'),
-    firstPage: NAV('<a data-step="previous" aria-disabled="true">Previous</a>'),
+    firstPage: NAV('<a data-step="previous" role="link" aria-disabled="true">Previous</a>'),
   },
 });

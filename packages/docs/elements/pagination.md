@@ -61,7 +61,7 @@ Add `class="l-pagination"` to a `<nav>` named with `aria-label`. Put the range s
 
 ### First and last page
 
-Leave out the `href` of a step that leads nowhere, and add `aria-disabled="true"` so assistive tech announces it as unavailable.
+Leave out the `href` of a step that leads nowhere, and add `role="link"` and `aria-disabled="true"`: an `<a>` without `href` has no role of its own, so assistive tech would not announce it as a disabled link otherwise.
 
 <ComponentWrapper :html="firstPage" />
 
@@ -99,13 +99,13 @@ Keep only the steps and the current page; name the glyph-only steps with `.l-vis
 <AccessibilityTable :data="[
   { Check: 'Landmark', Description: 'A `<nav>` named with `aria-label` exposes the pagination as a navigation region', WCAG: '[WCAG 1.3.1](https://www.w3.org/WAI/WCAG22/Understanding/info-and-relationships), [RGAA 12.6](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#12.6)' },
   { Check: 'Current page', Description: '`aria-current=&quot;page&quot;` identifies it; it is also set apart by weight, not by color alone', WCAG: '[WCAG 1.4.1](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color), [WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 3.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#3.1)' },
-  { Check: 'Unavailable step', Description: 'A link without `href` takes no focus; `aria-disabled=&quot;true&quot;` announces it as unavailable', WCAG: '[WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1)' },
+  { Check: 'Unavailable step', Description: 'A link without `href` takes no focus; `role=&quot;link&quot;` with `aria-disabled=&quot;true&quot;` announces it as a disabled link', WCAG: '[WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1)' },
   { Check: 'Target size', Description: 'Every link is at least the small control size, above the 24 px minimum', WCAG: '[WCAG 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum)' },
   { Check: 'Focus ring', Description: 'Links show the Luxen focus ring', WCAG: '[WCAG 2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible), [RGAA 10.7](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#10.7)' },
 ]" :rules="[
   'Name the `&lt;nav&gt;` with `aria-label`, e.g. `Pagination`',
   'Mark the current page with `aria-current=&quot;page&quot;`',
-  'Remove the `href` of an unavailable step and add `aria-disabled=&quot;true&quot;`',
+  'Remove the `href` of an unavailable step and add `role=&quot;link&quot;` and `aria-disabled=&quot;true&quot;`',
   'Name glyph-only steps with `.l-visually-hidden` text',
 ]" />
 

@@ -92,10 +92,11 @@
       font-weight: var(--l-font-weight-semibold);
     }
 
-    /* A step that leads nowhere: no href, no hover, no pointer. */
+    /* A step that leads nowhere: no href, so no focus and no hover; dimmed like
+       the library's other disabled controls. */
     & a:not([href]) {
-      color: var(--l-color-text-disabled);
-      cursor: default;
+      opacity: 0.4;
+      cursor: not-allowed;
     }
 
     & a[data-step='previous']::before,

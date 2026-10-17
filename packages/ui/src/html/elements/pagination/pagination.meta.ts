@@ -17,7 +17,7 @@
  *
  * @attribute aria-label - Names the navigation landmark (use `"Pagination"`).
  * @attribute aria-current - Set to `page` on the current page's `<a>`.
- * @attribute data-step - previous | next — On the step links: draws a direction glyph, flipped in right-to-left pages. Leave out `href` when the step leads nowhere, which removes it from the tab order and greys it out; add `aria-disabled="true"` so assistive tech says so.
+ * @attribute data-step - previous | next — On the step links: draws a direction glyph, flipped in right-to-left pages. Leave out `href` when the step leads nowhere, which removes it from the tab order and greys it out; add `role="link"` and `aria-disabled="true"` so assistive tech announces a disabled link (an `<a>` without `href` has no role of its own).
  *
  * @example Basic
  * <nav class="l-pagination" aria-label="Pagination">

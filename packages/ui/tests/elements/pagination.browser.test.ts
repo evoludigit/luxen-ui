@@ -93,12 +93,17 @@ describe('Steps', () => {
     expect(style(link('Next'), '::after').scale).toBe('-1 1');
   });
 
-  it('greys out a step without href and leaves it out of the tab order (WCAG 2.1.1 / RGAA 7.3)', async () => {
-    mount(PAGINATION({ previous: '<a data-step="previous" aria-disabled="true">Previous</a>' }));
+  it('shows a step without href as disabled and leaves it out of the tab order (WCAG 2.1.1 / RGAA 7.3)', async () => {
+    mount(
+      PAGINATION({
+        previous: '<a data-step="previous" role="link" aria-disabled="true">Previous</a>',
+      }),
+    );
     const disabled = host.querySelector<HTMLElement>('[data-step="previous"]')!;
 
-    expect(style(disabled).color).not.toBe(style(link('3')).color);
-    expect(style(disabled).cursor).toBe('default');
+    // Like the library's other disabled controls.
+    expect(style(disabled).opacity).toBe('0.4');
+    expect(style(disabled).cursor).toBe('not-allowed');
 
     await userEvent.click(link('before'));
     await userEvent.tab();
@@ -108,6 +113,18 @@ describe('Steps', () => {
 
 describe('Accessibility', () => {
   describe('Roles and accessible names', () => {
+    it('announces a step that leads nowhere as a disabled link (WCAG 4.1.2 / RGAA 7.1)', async () => {
+      mount(
+        PAGINATION({
+          previous: '<a data-step="previous" role="link" aria-disabled="true">Previous</a>',
+        }),
+      );
+
+      expect(
+        page.getByRole('link', { name: 'Previous' }).element().getAttribute('aria-disabled'),
+      ).toBe('true');
+    });
+
     it('lists the pages in order, the gap marker left out (WCAG 1.3.1 / RGAA 9.3)', async () => {
       mount(PAGINATION());
 
