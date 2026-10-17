@@ -101,6 +101,15 @@ describe('The page sets columns, the user changes them', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it('takes a visibility set by the page as the whole state: a key it leaves out is visible', async () => {
+    const el = await mount(TABLE());
+
+    el.columnVisibility = { name: false };
+    await settle(el);
+
+    expect(el.columnVisibility).toEqual({ sku: true, name: false, warehouse: true, stock: true });
+  });
+
   it('applies an order set by the page without reporting it', async () => {
     const el = await mount(TABLE());
     const listener = vi.fn();
