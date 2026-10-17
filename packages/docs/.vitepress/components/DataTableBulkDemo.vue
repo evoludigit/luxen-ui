@@ -15,8 +15,8 @@ const allVisible = ref(false);
 const allMatching = ref(false);
 
 function onSelectionChange(event) {
-  selected.value = event.selectedKeys;
-  allVisible.value = event.allVisibleSelected;
+  selected.value = Object.keys(event.rowSelection);
+  allVisible.value = event.allPageRowsSelected;
   allMatching.value = event.allMatching;
 }
 

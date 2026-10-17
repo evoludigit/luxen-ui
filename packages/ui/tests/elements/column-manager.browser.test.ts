@@ -58,7 +58,8 @@ async function settle() {
 
 const list = (name: string) => page.getByRole('list', { name }).element();
 const items = (name: string) =>
-  [...list(name).querySelectorAll('li')].map(
+  // The drop hint of an empty list is presentational, not an item.
+  [...list(name).querySelectorAll('li:not([role="presentation"])')].map(
     (li) => li.dataset.key ?? (li.textContent ?? '').trim(),
   );
 const button = (name: string) => page.getByRole('button', { name, exact: true }).element();
@@ -83,12 +84,7 @@ describe('The manager lists the table’s columns', () => {
   it('follows changes the page makes to the table', async () => {
     const table = await mount();
 
-    table.columns = table.columns.map(({ key, label, fixed }) => ({
-      key,
-      label,
-      fixed,
-      visible: true,
-    }));
+    table.columnVisibility = Object.fromEntries(table.columnOrder.map((key) => [key, true]));
     await settle();
 
     expect(items('Hidden columns')).toEqual([]);
@@ -203,6 +199,26 @@ describe('Dragging a column', () => {
   });
 });
 
+describe('An empty list', () => {
+  it('takes a column dropped on its hint', async () => {
+    const table = await mount();
+    for (const key of items('Hidden columns')) {
+      await userEvent.click(
+        list('Hidden columns').querySelector(`li[data-key="${key}"] [data-control="eye"]`),
+      );
+      await settle();
+    }
+    const hint = host.querySelector('.l-column-manager-hint')!;
+    expect(hint).toBeTruthy();
+    const name = list('Shown columns').querySelector('li[data-key="name"]')!;
+
+    await userEvent.dragAndDrop(name, hint);
+    await settle();
+
+    expect(table.columns.find((c) => c.key === 'name')!.visible).toBe(false);
+  });
+});
+
 describe('Resetting the columns', () => {
   it('restores the header’s defaults and forgets the stored ones', async () => {
     const table = await mount(MARKUP().replace('id="products"', 'id="products" persist-key="p"'));
@@ -220,6 +236,17 @@ describe('Resetting the columns', () => {
 });
 
 describe('Accessibility', () => {
+  describe('Announcements', () => {
+    it('keeps its live region out of sight but in the accessibility tree', async () => {
+      await mount();
+      const region = host.querySelector<HTMLElement>('[role="status"]')!;
+
+      expect(region.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+      expect(getComputedStyle(region).position).toBe('absolute');
+      expect(getComputedStyle(region).display).not.toBe('none');
+    });
+  });
+
   describe('Roles and accessible names', () => {
     it('names every control after its column, in the page language (WCAG 4.1.2 / RGAA 7.1)', async () => {
       const previous = document.documentElement.lang;

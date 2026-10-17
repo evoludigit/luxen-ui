@@ -1,7 +1,11 @@
 // oxlint-disable-next-line typescript/triple-slash-reference -- required: test files aren't in any tsconfig include.
 /// <reference path="./vitest.d.ts" />
 import { describe, expect, it } from 'vitest';
-import { SelectionState } from '../src/html/elements/data-table/selection-state.js';
+import {
+  SelectionState,
+  selectedKeys,
+  toRowSelection,
+} from '../src/html/elements/data-table/selection-state.js';
 
 const VISIBLE = ['a', 'b', 'c', 'd', 'e'];
 
@@ -161,15 +165,6 @@ describe('The header checkbox reflects the visible rows', () => {
 });
 
 describe('"All matching" stands for rows beyond the page', () => {
-  it('is offered only when every visible row is selected and more rows match', () => {
-    const s = new SelectionState('multiple');
-    s.setVisible(VISIBLE, true);
-    expect(s.offersAllMatching(VISIBLE, 5)).toBe(false);
-    expect(s.offersAllMatching(VISIBLE, 120)).toBe(true);
-    s.toggle('a');
-    expect(s.offersAllMatching(VISIBLE, 120)).toBe(false);
-  });
-
   it('is cleared by any change a user makes', () => {
     const s = new SelectionState('multiple');
     s.setVisible(VISIBLE, true);
@@ -185,14 +180,22 @@ describe('"All matching" stands for rows beyond the page', () => {
     expect(s.allMatching).toBe(false);
   });
 
-  it('is not offered for an empty page', () => {
-    const s = new SelectionState('multiple');
-    expect(s.offersAllMatching([], 120)).toBe(false);
-  });
-
   it('never applies to radios', () => {
     const s = new SelectionState('single');
     s.allMatching = true;
     expect(s.allMatching).toBe(false);
+  });
+});
+
+describe('The selection is reported as TanStack Table’s RowSelectionState', () => {
+  it('maps each selected key to true', () => {
+    expect(toRowSelection(['sku-1', 'sku-3'])).toEqual({ 'sku-1': true, 'sku-3': true });
+  });
+
+  it('reads back the keys set to true, ignoring the false ones TanStack may leave', () => {
+    expect(selectedKeys({ 'sku-1': true, 'sku-2': false, 'sku-3': true })).toEqual([
+      'sku-1',
+      'sku-3',
+    ]);
   });
 });

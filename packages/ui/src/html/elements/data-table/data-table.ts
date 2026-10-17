@@ -2,9 +2,16 @@ import { property } from 'lit/decorators.js';
 import { LuxenElement } from '../../shared/luxen-element.js';
 import { LocalizeController } from '../../shared/localize.js';
 import { cls, getPrefix } from '../../registry.js';
-import { nextSort, sortFromHeaders, type SortEntry } from './sort-state.js';
-import { SelectionState } from './selection-state.js';
+import { nextSorting, sortingFromHeaders, type SortingState } from './sort-state.js';
 import {
+  SelectionState,
+  selectedKeys,
+  toRowSelection,
+  type RowSelectionState,
+} from './selection-state.js';
+import {
+  columnOrder,
+  columnVisibility,
   decode,
   encode,
   fromHeaders,
@@ -12,21 +19,26 @@ import {
   merge,
   type Column,
   type ColumnDeclaration,
+  type ColumnOrderState,
+  type ColumnPreferences,
+  type ColumnVisibilityState,
 } from './column-state.js';
 
-export type { SortDirection, SortEntry } from './sort-state.js';
-export type { Column } from './column-state.js';
+export type { ColumnSort, SortingState } from './sort-state.js';
+export type { RowSelectionState } from './selection-state.js';
+export type { Column, ColumnOrderState, ColumnVisibilityState } from './column-state.js';
 
 /**
  * Fired when a sortable header's button is activated. Reports the sort the page
- * should apply; the element changes nothing itself, so there is nothing to
- * cancel — the page renders `aria-sort` and the rows.
+ * should apply, as TanStack Table's `SortingState`; the element changes nothing
+ * itself, so there is nothing to cancel — the page renders `aria-sort` and the
+ * rows.
  */
 export class SortChangeEvent extends Event {
-  readonly sort: SortEntry | null;
-  constructor(sort: SortEntry | null) {
+  readonly sorting: SortingState;
+  constructor(sorting: SortingState) {
     super('sort-change', { bubbles: false, composed: false, cancelable: false });
-    this.sort = sort;
+    this.sorting = sorting;
   }
 }
 
@@ -37,32 +49,36 @@ declare global {
 }
 
 /**
- * Fired when the user changes the selection. Not fired when the page sets
- * `selectedKeys`, `allMatching` or calls `clearSelection()`.
+ * Fired when the user changes the selection, as TanStack Table's
+ * `RowSelectionState`. Not fired when the page sets `rowSelection`,
+ * `allMatching` or calls `clearSelection()`.
  */
 export class DataTableSelectionChangeEvent extends Event {
-  readonly selectedKeys: readonly string[];
+  readonly rowSelection: RowSelectionState;
   readonly allMatching: boolean;
-  readonly allVisibleSelected: boolean;
-  constructor(selectedKeys: readonly string[], allMatching: boolean, allVisibleSelected: boolean) {
+  readonly allPageRowsSelected: boolean;
+  constructor(rowSelection: RowSelectionState, allMatching: boolean, allPageRowsSelected: boolean) {
     super('selection-change', { bubbles: false, composed: false, cancelable: false });
-    this.selectedKeys = selectedKeys;
+    this.rowSelection = rowSelection;
     this.allMatching = allMatching;
-    this.allVisibleSelected = allVisibleSelected;
+    this.allPageRowsSelected = allPageRowsSelected;
   }
 }
 
 /**
  * Fired when the columns change through the user (a column manager), a reset
- * from it, or preferences restored from `persist-key`. Not fired when the page
- * sets `columns` or calls `resetColumns()`. The page renders `columns` in this
- * order; hiding is applied by the element.
+ * from it, or preferences restored from `persist-key`, as TanStack Table's
+ * `ColumnOrderState` and `ColumnVisibilityState`. Not fired when the page sets
+ * `columnOrder` or `columnVisibility`, or calls `resetColumns()`. The page
+ * renders its columns in `columnOrder`; hiding is applied by the element.
  */
 export class ColumnChangeEvent extends Event {
-  readonly columns: readonly Column[];
+  readonly columnOrder: ColumnOrderState;
+  readonly columnVisibility: ColumnVisibilityState;
   constructor(columns: readonly Column[]) {
     super('column-change', { bubbles: false, composed: false, cancelable: false });
-    this.columns = columns;
+    this.columnOrder = columnOrder(columns);
+    this.columnVisibility = columnVisibility(columns);
   }
 }
 
@@ -106,7 +122,12 @@ const HEADER_ROW = ':scope > table > thead > tr';
  * empty `th[data-select]` once the script runs, since without it it would do
  * nothing; an authored one is used as is.
  *
- * Do not bind `checked` on the row inputs: set `selectedKeys` instead.
+ * Do not bind `checked` on the row inputs: set `rowSelection` instead.
+ *
+ * The sort, selection and columns travel in TanStack Table's state shapes
+ * (`SortingState`, `RowSelectionState`, `ColumnOrderState`,
+ * `ColumnVisibilityState`), so a page can pass them to TanStack Table or map
+ * them to its query as they are.
  *
  * Columns are the keyed headers (`th[data-key]`, `data-fixed`, `data-hidden`).
  * The element hides columns with a stylesheet of its own and reports order
@@ -134,9 +155,9 @@ const HEADER_ROW = ':scope > table > thead > tr';
  * </l-data-table>
  * ```
  *
- * @event sort-change - Fired when a sortable header is activated. Not cancelable. Properties: `sort: { key, direction } | null`.
- * @event selection-change - Fired when the user changes the selection. Not cancelable. Properties: `selectedKeys: string[]`, `allMatching: boolean`, `allVisibleSelected: boolean`.
- * @event column-change - Fired when the user changes the columns, or stored ones are restored. Not cancelable. Properties: `columns: { key, label, fixed, visible }[]`.
+ * @event sort-change - Fired when a sortable header is activated. Not cancelable. Properties: `sorting: { id, desc }[]` (at most one entry).
+ * @event selection-change - Fired when the user changes the selection. Not cancelable. Properties: `rowSelection: Record<string, boolean>`, `allMatching: boolean`, `allPageRowsSelected: boolean`.
+ * @event column-change - Fired when the user changes the columns, or stored ones are restored. Not cancelable. Properties: `columnOrder: string[]`, `columnVisibility: Record<string, boolean>`.
  *
  * @customElement l-data-table
  */
@@ -177,8 +198,8 @@ export class DataTable extends LuxenElement {
   private _added: HTMLInputElement | null = null;
 
   /** The sort the markup states, read from the headers' `aria-sort`. */
-  get sort(): SortEntry | null {
-    return sortFromHeaders(
+  get sorting(): SortingState {
+    return sortingFromHeaders(
       [...this.querySelectorAll<HTMLElement>(':scope > table > thead > tr > th[data-key]')].map(
         (th) => ({ key: th.dataset.key!, ariaSort: th.getAttribute('aria-sort') }),
       ),
@@ -186,12 +207,12 @@ export class DataTable extends LuxenElement {
   }
 
   /** Selected row values, including rows that are not in the table right now. */
-  get selectedKeys(): readonly string[] {
-    return this._selection.keys;
+  get rowSelection(): RowSelectionState {
+    return toRowSelection(this._selection.keys);
   }
 
-  set selectedKeys(keys: readonly string[]) {
-    this._selection.set(keys);
+  set rowSelection(selection: RowSelectionState) {
+    this._selection.set(selectedKeys(selection));
     this._queueSync();
   }
 
@@ -213,13 +234,36 @@ export class DataTable extends LuxenElement {
     this._queueSync();
   }
 
-  /** Column order and visibility. Setting it applies without an event. */
+  /** The keyed columns in display order, with their labels: what a column manager lists. */
   get columns(): readonly Column[] {
     return this._columns;
   }
 
-  set columns(columns: readonly Column[]) {
-    this._applyColumns(columns);
+  /** Every keyed column, in display order. Setting it applies without an event; fixed columns keep their place. */
+  get columnOrder(): ColumnOrderState {
+    return columnOrder(this._columns);
+  }
+
+  set columnOrder(order: ColumnOrderState) {
+    this._applyPreferences({ columnOrder: order });
+  }
+
+  /**
+   * Visibility by column key. Setting it replaces the whole state, as in TanStack
+   * Table: a key it leaves out is visible. Applies without an event.
+   */
+  get columnVisibility(): ColumnVisibilityState {
+    return columnVisibility(this._columns);
+  }
+
+  set columnVisibility(visibility: ColumnVisibilityState) {
+    const partial: Readonly<Partial<Record<string, boolean>>> = visibility;
+    if (!this._defaults) this._syncColumns();
+    this._applyPreferences({
+      columnVisibility: Object.fromEntries(
+        (this._defaults ?? []).map((c) => [c.key, partial[c.key] ?? true]),
+      ),
+    });
   }
 
   /** Restores the header's default columns. No event; stored columns stay. */
@@ -397,6 +441,13 @@ export class DataTable extends LuxenElement {
     this._setColumns(columns === null ? this._defaults : merge(this._defaults, encode(columns)));
   }
 
+  /** Applies part of the column state, the rest staying as it is. */
+  private _applyPreferences(changes: Partial<ColumnPreferences>) {
+    if (!this._defaults) this._syncColumns();
+    if (!this._defaults) return;
+    this._setColumns(merge(this._defaults, { ...encode(this._columns), ...changes }));
+  }
+
   private _onColumnsRequest = (e: Event) => {
     const { columns } = e as ColumnsRequestEvent;
     this._applyColumns(columns);
@@ -425,7 +476,7 @@ export class DataTable extends LuxenElement {
     }
   }
 
-  /** One stylesheet on the element's own root — document or shadow root (spike S5). */
+  /** One stylesheet on the element's own root — document or shadow root. */
   private _applyHiding() {
     const row = this.querySelector(HEADER_ROW);
     const hidden = new Set(this._columns.filter((c) => !c.visible).map((c) => c.key));
@@ -433,12 +484,14 @@ export class DataTable extends LuxenElement {
       ? [...row.children].map((cell) => (cell as HTMLElement).dataset.key ?? null)
       : [];
     // The <col> too: columns are positional, so a width set on a hidden column's
-    // <col> would otherwise land on the column that slides into its place.
+    // <col> would otherwise land on the column that slides into its place. Rows
+    // with a spanning cell (an empty state, a group heading) don't follow the
+    // header's positions and are left alone.
     const table = `[data-column-scope="${this._scope}"] > table`;
     const text = hiddenIndices(keys, hidden)
       .map(
         (i) =>
-          `${table} > :is(thead, tbody, tfoot) > tr > :nth-child(${i}), ${table} > colgroup > col:nth-child(${i}) { display: none; }`,
+          `${table} > :is(thead, tbody, tfoot) > tr:not(:has(> [colspan])) > :nth-child(${i}), ${table} > colgroup > col:nth-child(${i}) { display: none; }`,
       )
       .join('\n');
     if (text === this._sheetText) return;
@@ -496,7 +549,7 @@ export class DataTable extends LuxenElement {
     ) {
       return;
     }
-    this.dispatchEvent(new SortChangeEvent(nextSort(this.sort, th.dataset.key!)));
+    this.dispatchEvent(new SortChangeEvent(nextSorting(this.sorting, th.dataset.key!)));
   };
 
   private _onKeyDown = (e: KeyboardEvent) => {
@@ -526,7 +579,7 @@ export class DataTable extends LuxenElement {
       const visible = this._visibleKeys();
       this.dispatchEvent(
         new DataTableSelectionChangeEvent(
-          this._selection.keys,
+          toRowSelection(this._selection.keys),
           this._selection.allMatching,
           visible.length > 0 && this._selection.headerState(visible) === 'all',
         ),

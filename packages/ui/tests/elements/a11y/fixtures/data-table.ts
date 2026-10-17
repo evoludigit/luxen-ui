@@ -34,9 +34,9 @@ export default defineA11yFixture({
       html: TABLE(ROW('a', 'SKU-1042', 'Desk lamp') + ROW('b', 'SKU-2087', 'Office chair')),
       setup: async (host) => {
         const table = host.querySelector('l-data-table') as HTMLElement & {
-          selectedKeys: string[];
+          rowSelection: Record<string, boolean>;
         };
-        table.selectedKeys = ['a'];
+        table.rowSelection = { a: true };
         await new Promise((r) => setTimeout(r, 0));
       },
     },

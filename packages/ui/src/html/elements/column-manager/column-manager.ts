@@ -278,10 +278,15 @@ export class ColumnManager extends LuxenElement {
         @drop=${(e: DragEvent) => this._onDrop(e, kind)}
       >
         ${columns.map((c, i) => this._item(c, i, columns.length))}
-      </ul>
-      ${columns.length === 0
-        ? html`<p class=${cls('column-manager-hint')}>${t.term('dropColumnHere')}</p>`
-        : nothing}`;
+        ${columns.length === 0
+          ? html`<li
+              class=${cls('column-manager-hint')}
+              role="presentation"
+            >
+              ${t.term('dropColumnHere')}
+            </li>`
+          : nothing}
+      </ul>`;
   }
 
   override render() {

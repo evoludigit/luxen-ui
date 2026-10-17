@@ -166,7 +166,7 @@ Put a native checkbox in a `data-select` cell at the start of each row, and name
 
 Add `selectable` to `<l-data-table>` and leave the header's `data-select` cell empty: a header checkbox is added once the script runs, showing a mixed state while some rows are selected. Shift with a click or with Space selects a range. A selected row stays selected when it leaves the table, a filter or another page, and is checked again when it returns. Use radios instead of checkboxes to select one row at most.
 
-The element fires `selection-change` with `selectedKeys`, the inputs' `value`s. Set `selectedKeys` or call `clearSelection()` to drive it from the page; do not bind `checked` on the row inputs.
+The element fires `selection-change` with `rowSelection`, the inputs' `value`s mapped to `true`. Set `rowSelection` or call `clearSelection()` to drive it from the page; do not bind `checked` on the row inputs.
 
 <ComponentWrapper :html="selectableRows" />
 
@@ -177,7 +177,7 @@ The element fires `selection-change` with `selectedKeys`, the inputs' `value`s. 
 
 ### Columns the user picks
 
-Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` for the page to render. Add `persist-key` to keep the user's columns between visits.
+Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` (`columnOrder`, `columnVisibility`) for the page to render. Add `persist-key` to keep the user's columns between visits. The table hides a column by its position, so give the first column `data-fixed`: it carries the jump-to mark, and in the grid appearance the first and last cells carry the rounded corners. Rows with a spanning cell, such as an empty state, are left as they are.
 
 <ColumnManagerDemo />
 
@@ -259,7 +259,7 @@ Sort on the server: refetch on `sort-change`, set `aria-busy` while the request 
 
 ### Bulk actions
 
-Show the actions from `selection-change`, in a `role="status"` region so the count is announced. When every visible row is selected (`allVisibleSelected`) and the query matches more, offer to select them all and set `allMatching`: the page then acts on the query rather than on the keys. The next change the user makes clears it.
+Show the actions from `selection-change`, in a `role="status"` region so the count is announced. When every visible row is selected (`allPageRowsSelected`) and the query matches more, offer to select them all and set `allMatching`: the page then acts on the query rather than on the keys. The next change the user makes clears it.
 
 <DataTableBulkDemo />
 
@@ -281,13 +281,15 @@ The checked rows submit their values with the form, with or without the script.
 
 ### Listening to the events
 
+The events carry TanStack Table's state shapes, and the matching properties take them: `sorting` (`[{ id, desc }]`, at most one entry), `rowSelection` (`{ [value]: true }`), `columnOrder` (keys in order) and `columnVisibility` (`{ [key]: boolean }`, a missing key is visible). A page already on TanStack Table passes them through as they are; any other maps them to its query in a line.
+
 ::: code-group
 
 ```html [Vue]
 <l-data-table
   selectable
-  @sort-change="sort = $event.sort"
-  @selection-change="selected = $event.selectedKeys"
+  @sort-change="sorting = $event.sorting"
+  @selection-change="rowSelection = $event.rowSelection"
 >
   <table class="l-table">
     …
@@ -298,8 +300,8 @@ The checked rows submit their values with the form, with or without the script.
 ```jsx [React 19]
 <l-data-table
   selectable
-  onsort-change={(e) => setSort(e.sort)}
-  onselection-change={(e) => setSelected(e.selectedKeys)}
+  onsort-change={(e) => setSorting(e.sorting)}
+  onselection-change={(e) => setRowSelection(e.rowSelection)}
 >
   <table className="l-table">…</table>
 </l-data-table>
@@ -307,8 +309,8 @@ The checked rows submit their values with the form, with or without the script.
 
 ```js [JavaScript]
 const table = document.querySelector('l-data-table');
-table.addEventListener('sort-change', (e) => render({ sort: e.sort }));
-table.addEventListener('selection-change', (e) => update(e.selectedKeys));
+table.addEventListener('sort-change', (e) => render({ sorting: e.sorting }));
+table.addEventListener('selection-change', (e) => update(e.rowSelection));
 ```
 
 :::

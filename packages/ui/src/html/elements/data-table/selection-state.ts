@@ -9,6 +9,18 @@
  */
 
 export type SelectionMode = 'multiple' | 'single';
+
+/** Selected row keys, as TanStack Table's `RowSelectionState`. */
+export type RowSelectionState = Readonly<Record<string, boolean>>;
+
+export function toRowSelection(keys: readonly string[]): RowSelectionState {
+  return Object.fromEntries(keys.map((key) => [key, true]));
+}
+
+/** The keys a `RowSelectionState` selects: TanStack may keep deselected keys as `false`. */
+export function selectedKeys(selection: RowSelectionState): string[] {
+  return Object.keys(selection).filter((key) => selection[key]);
+}
 export type HeaderState = 'none' | 'some' | 'all';
 
 export class SelectionState {
@@ -95,16 +107,6 @@ export class SelectionState {
     const selected = visible.filter((key) => this._keys.has(key)).length;
     if (selected === 0) return 'none';
     return selected === visible.length ? 'all' : 'some';
-  }
-
-  /** Whether a page should offer "select all `total` matching". */
-  offersAllMatching(visible: readonly string[], total: number): boolean {
-    return (
-      this.mode === 'multiple' &&
-      visible.length > 0 &&
-      total > visible.length &&
-      this.headerState(visible) === 'all'
-    );
   }
 
   private _apply(key: string, selected: boolean): boolean {
