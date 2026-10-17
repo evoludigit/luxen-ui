@@ -221,6 +221,15 @@
       "inMockups": false
     },
     {
+      "name": "pagination",
+      "displayName": "Pagination",
+      "kind": "native",
+      "type": "native",
+      "inSkill": true,
+      "inMockups": true,
+      "selector": ".l-pagination"
+    },
+    {
       "name": "popover",
       "displayName": "Popover",
       "kind": "element",

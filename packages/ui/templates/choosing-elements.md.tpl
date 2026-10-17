@@ -116,6 +116,7 @@ the platform genuinely can't express the behavior (a modal, a combobox, a toast)
 | User intent                                          | Element                                  |
 | ---------------------------------------------------- | ---------------------------------------- |
 | Current location in a hierarchy                      | `.l-breadcrumb`                          |
+| Move through the pages of a long list                | `.l-pagination` (on `<nav>`)             |
 | Switch between sibling panels                        | `<l-tabs>`                               |
 | Expand/collapse a single section                     | `.l-disclosure` (on `<details>`)         |
 | A swipeable/scrollable gallery                       | `<l-carousel>`                           |
