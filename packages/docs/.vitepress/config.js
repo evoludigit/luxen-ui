@@ -128,6 +128,7 @@ export default defineConfig({
           el('Drawer', 'l-drawer', 'drawer'),
           el('Icon', 'l-icon', 'icon'),
           el('Kbd', 'kbd', 'kbd'),
+          el('Pagination', 'nav', 'pagination'),
           el('Popover', 'l-popover', 'popover'),
           el('Progress', 'progress', 'progress'),
           el('Prose editor', 'l-prose-editor', 'prose-editor'),

@@ -51,6 +51,7 @@ Visit https://luxen-ui.com to explore the documentation.
 | Input OTP         | `<l-input-otp>`         | ⬡ Progressive Custom HTML Element       |
 | Input stepper     | `<l-input-stepper>`     | ⬡ Progressive Custom HTML Element       |
 | Kbd               | `<kbd>`                 | ⏣ Native HTML Element                   |
+| Pagination        | `<nav>`                 | ⏣ Native HTML Element                   |
 | Popover           | `<l-popover>`           | ⬢ Custom HTML Element (with Shadow DOM) |
 | Progress          | `<progress>`            | ⏣ Native HTML Element                   |
 | Prose editor      | `<l-prose-editor>`      | ⬢ Custom HTML Element (with Shadow DOM) |
