@@ -110,6 +110,7 @@ the platform genuinely can't express the behavior (a modal, a combobox, a toast)
 | A separator between content                          | `<l-divider>`                            |
 | Hierarchical, expandable data                        | `<l-tree>`                               |
 | Records in rows and columns                          | `.l-table` (on `<table>`)                |
+| Records the user sorts or selects                    | `<l-data-table>` around a `.l-table`     |
 
 ### Navigate or organize
 
