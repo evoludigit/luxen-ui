@@ -138,12 +138,21 @@ describe('Saved preferences meet the current header', () => {
     expect(hidden(merged)).toEqual(['supplier']);
   });
 
-  it('show a known column the visibility map leaves out, as TanStack does', () => {
+  it('apply the visibility of columns the order does not list', () => {
+    const merged = merge(DECLARED, {
+      columnOrder: [],
+      columnVisibility: { supplier: true, name: false },
+    });
+    expect(keys(merged)).toEqual(['sku', 'name', 'warehouse', 'supplier', 'stock']);
+    expect(hidden(merged)).toEqual(['name']);
+  });
+
+  it('give a column the visibility map leaves out its declared visibility', () => {
     const merged = merge(DECLARED, {
       columnOrder: ['sku', 'name', 'warehouse', 'supplier', 'stock'],
       columnVisibility: { name: false },
     });
-    expect(hidden(merged)).toEqual(['name']);
+    expect(hidden(merged)).toEqual(['name', 'supplier']);
   });
 
   it('leave the declared state alone when there is nothing saved', () => {

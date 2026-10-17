@@ -248,13 +248,22 @@ export class DataTable extends LuxenElement {
     this._applyPreferences({ columnOrder: order });
   }
 
-  /** Visibility by column key; a missing key is visible. Setting it applies without an event. */
+  /**
+   * Visibility by column key. Setting it replaces the whole state, as in TanStack
+   * Table: a key it leaves out is visible. Applies without an event.
+   */
   get columnVisibility(): ColumnVisibilityState {
     return columnVisibility(this._columns);
   }
 
   set columnVisibility(visibility: ColumnVisibilityState) {
-    this._applyPreferences({ columnVisibility: visibility });
+    const partial: Readonly<Partial<Record<string, boolean>>> = visibility;
+    if (!this._defaults) this._syncColumns();
+    this._applyPreferences({
+      columnVisibility: Object.fromEntries(
+        (this._defaults ?? []).map((c) => [c.key, partial[c.key] ?? true]),
+      ),
+    });
   }
 
   /** Restores the header's default columns. No event; stored columns stay. */

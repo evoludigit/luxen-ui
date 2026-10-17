@@ -81,26 +81,29 @@ export function setVisible(
 /**
  * Applies preferences to the columns the header declares now. Keys the header
  * no longer has are dropped, and fixed columns keep their place and stay
- * visible. A declared column the order does not list keeps its declared
- * visibility and sits after its declared predecessor; one it lists but the
- * visibility map leaves out is visible, as in TanStack Table.
+ * visible. Order and visibility are independent, as in TanStack Table: the
+ * order arranges the columns it lists, and a column it does not list sits after
+ * its declared predecessor; the visibility map shows or hides the columns it
+ * lists, and a column it does not list keeps its declared visibility.
  */
 export function merge(
   declared: readonly Column[],
   preferences: ColumnPreferences | null,
 ): readonly Column[] {
   if (!preferences) return declared;
-  const movable = declared.filter((c) => !c.fixed);
-  const byKey = new Map(movable.map((c) => [c.key, c]));
-  const order = preferences.columnOrder;
-  // A key the map leaves out is visible, as in TanStack Table.
   const visibility: Readonly<Partial<Record<string, boolean>>> = preferences.columnVisibility;
-  const known = new Set(order.filter((key) => byKey.has(key)));
+  const movable = declared
+    .filter((c) => !c.fixed)
+    .map(({ key, label, fixed, visible }) => ({
+      key,
+      label,
+      fixed,
+      visible: visibility[key] ?? visible,
+    }));
+  const byKey = new Map(movable.map((c) => [c.key, c]));
+  const known = new Set(preferences.columnOrder.filter((key) => byKey.has(key)));
 
-  const ordered: Column[] = [...known].map((key) => {
-    const { label, fixed } = byKey.get(key)!;
-    return { key, label, fixed, visible: visibility[key] ?? true };
-  });
+  const ordered: Column[] = [...known].map((key) => byKey.get(key)!);
   movable.forEach((column, i) => {
     if (known.has(column.key)) return;
     const predecessor = movable[i - 1]?.key;
