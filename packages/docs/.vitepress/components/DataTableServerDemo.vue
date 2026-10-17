@@ -10,33 +10,40 @@ const catalogue = [
   { sku: 'SKU-5136', name: 'Bookshelf', stock: 640 },
 ];
 
-async function fetchProducts(sort) {
+// Takes TanStack Table's SortingState, as an API mapping it to ORDER BY would.
+async function fetchProducts(sorting) {
   await new Promise((r) => setTimeout(r, 700));
-  if (!sort) return catalogue;
-  const sign = sort.direction === 'ascending' ? 1 : -1;
+  const [sorted] = sorting;
+  if (!sorted) return catalogue;
+  const { id, desc } = sorted;
+  const sign = desc ? -1 : 1;
   return catalogue.toSorted((a, b) =>
-    typeof a[sort.key] === 'number'
-      ? sign * (a[sort.key] - b[sort.key])
-      : sign * a[sort.key].localeCompare(b[sort.key]),
+    typeof a[id] === 'number' ? sign * (a[id] - b[id]) : sign * a[id].localeCompare(b[id]),
   );
 }
 
 const rows = ref([]);
-const sort = ref(null);
+const sorting = ref([]);
 const loading = ref(true);
 
 async function load() {
   loading.value = true;
-  rows.value = await fetchProducts(sort.value);
+  rows.value = await fetchProducts(sorting.value);
   loading.value = false;
 }
 
 function onSortChange(event) {
-  sort.value = event.sort;
+  sorting.value = event.sorting;
   void load();
 }
 
 onMounted(load);
+
+const ariaSort = (key) => {
+  const [sorted] = sorting.value;
+  if (sorted?.id !== key) return null;
+  return sorted.desc ? 'descending' : 'ascending';
+};
 
 const format = new Intl.NumberFormat('en');
 const columns = [
@@ -67,7 +74,7 @@ const columns = [
               scope="col"
               :data-key="column.key"
               :data-type="column.number ? 'number' : null"
-              :aria-sort="sort?.key === column.key ? sort.direction : null"
+              :aria-sort="ariaSort(column.key)"
             >
               <button type="button">{{ column.label }}</button>
             </th>

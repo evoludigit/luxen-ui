@@ -32,7 +32,7 @@ const format = new Intl.NumberFormat('en');
       <l-data-table
         id="column-manager-demo"
         class="min-w-0 flex-1"
-        @column-change="order = $event.columns.map((c) => c.key)"
+        @column-change="order = $event.columnOrder"
       >
         <table class="l-table">
           <caption>

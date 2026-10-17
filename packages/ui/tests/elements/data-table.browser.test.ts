@@ -104,7 +104,7 @@ describe('A sortable header reports the sort the page should apply', () => {
     await userEvent.click(page.getByRole('button', { name: 'Name' }));
     const event = await next;
 
-    expect(event.sort).toEqual({ key: 'name', direction: 'ascending' });
+    expect(event.sorting).toEqual([{ id: 'name', desc: false }]);
     expect(el.querySelector('th[data-key="name"]')!.hasAttribute('aria-sort')).toBe(false);
     expect(event.bubbles).toBe(false);
     expect(event.cancelable).toBe(false);
@@ -116,7 +116,7 @@ describe('A sortable header reports the sort the page should apply', () => {
 
     await userEvent.click(page.getByRole('button', { name: 'SKU' }));
 
-    expect((await next).sort).toEqual({ key: 'sku', direction: 'descending' });
+    expect((await next).sorting).toEqual([{ id: 'sku', desc: true }]);
   });
 
   it('reports no sort after descending', async () => {
@@ -125,17 +125,17 @@ describe('A sortable header reports the sort the page should apply', () => {
 
     await userEvent.click(page.getByRole('button', { name: 'SKU' }));
 
-    expect((await next).sort).toBeNull();
+    expect((await next).sorting).toEqual([]);
   });
 
   it('reads its sort from the markup, following the page', async () => {
     const el = await mount(TABLE({ sort: 'aria-sort="ascending"' }));
-    expect(el.sort).toEqual({ key: 'sku', direction: 'ascending' });
+    expect(el.sorting).toEqual([{ id: 'sku', desc: false }]);
 
     el.querySelector('th[data-key="sku"]')!.removeAttribute('aria-sort');
     el.querySelector('th[data-key="name"]')!.setAttribute('aria-sort', 'descending');
 
-    expect(el.sort).toEqual({ key: 'name', direction: 'descending' });
+    expect(el.sorting).toEqual([{ id: 'name', desc: true }]);
   });
 
   it('leaves a header link alone: following it is the sort', async () => {
@@ -181,8 +181,8 @@ describe('With selectable, rows are selected through their own checkboxes', () =
     await userEvent.click(row('SKU-2'));
     const event = await next;
 
-    expect(event.selectedKeys).toEqual(['b']);
-    expect(event.allVisibleSelected).toBe(false);
+    expect(event.rowSelection).toEqual({ b: true });
+    expect(event.allPageRowsSelected).toBe(false);
     expect(event.allMatching).toBe(false);
     expect(event.bubbles).toBe(false);
   });
@@ -200,7 +200,7 @@ describe('With selectable, rows are selected through their own checkboxes', () =
 
     await userEvent.click(header());
     expect(checkedSkus()).toEqual([]);
-    expect(el.selectedKeys).toEqual([]);
+    expect(el.rowSelection).toEqual({});
   });
 
   it('selects a range with Shift and a click', async () => {
@@ -212,7 +212,7 @@ describe('With selectable, rows are selected through their own checkboxes', () =
     await userEvent.keyboard('{/Shift}');
 
     expect(checkedSkus()).toEqual(['a', 'b', 'c']);
-    expect(new Set(el.selectedKeys)).toEqual(new Set(['a', 'b', 'c']));
+    expect(new Set(Object.keys(el.rowSelection))).toEqual(new Set(['a', 'b', 'c']));
   });
 
   it('selects a range with Shift and Space (WCAG 2.1.1 / RGAA 7.3)', async () => {
@@ -234,7 +234,7 @@ describe('With selectable, rows are selected through their own checkboxes', () =
     const tbody = el.querySelector('tbody')!;
     tbody.innerHTML = ROW('e', 'SKU-5');
     await settle();
-    expect(el.selectedKeys).toEqual(['b']);
+    expect(el.rowSelection).toEqual({ b: true });
 
     tbody.innerHTML = ROW('a', 'SKU-1') + ROW('b', 'SKU-2');
     await settle();
@@ -246,22 +246,32 @@ describe('With selectable, rows are selected through their own checkboxes', () =
     const listener = vi.fn();
     el.addEventListener('selection-change', listener);
 
-    el.selectedKeys = ['a', 'c', 'x'];
+    el.rowSelection = { a: true, c: true, x: true };
     await settle();
 
     expect(checkedSkus()).toEqual(['a', 'c']);
-    expect(el.selectedKeys).toEqual(['a', 'c', 'x']);
+    expect(el.rowSelection).toEqual({ a: true, c: true, x: true });
     el.clearSelection();
     await settle();
     expect(checkedSkus()).toEqual([]);
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it('selects only the keys a RowSelectionState sets to true', async () => {
+    const el = await mount(TABLE({ attrs: 'selectable' }));
+
+    el.rowSelection = { a: true, b: false };
+    await settle();
+
+    expect(el.rowSelection).toEqual({ a: true });
+    expect(checkedSkus()).toEqual(['a']);
+  });
+
   it('reports when every visible row is selected, and drops "all matching" on the next change', async () => {
     const el = await mount(TABLE({ attrs: 'selectable' }));
     const all = waitForEvent(el, 'selection-change') as Promise<DataTableSelectionChangeEvent>;
     await userEvent.click(header());
-    expect((await all).allVisibleSelected).toBe(true);
+    expect((await all).allPageRowsSelected).toBe(true);
 
     el.allMatching = true;
     const next = waitForEvent(el, 'selection-change') as Promise<DataTableSelectionChangeEvent>;
@@ -279,7 +289,7 @@ describe('With selectable, rows are selected through their own checkboxes', () =
     await userEvent.click(page.getByRole('radio', { name: 'Select SKU-1' }));
     await userEvent.click(page.getByRole('radio', { name: 'Select SKU-2' }));
 
-    expect(el.selectedKeys).toEqual(['b']);
+    expect(el.rowSelection).toEqual({ b: true });
     expect(host.querySelectorAll('thead input')).toHaveLength(0);
   });
 
@@ -340,7 +350,7 @@ describe('Accessibility', () => {
       await userEvent.tab();
       await userEvent.keyboard('{Enter}');
 
-      expect((await next).sort).toEqual({ key: 'sku', direction: 'ascending' });
+      expect((await next).sorting).toEqual([{ id: 'sku', desc: false }]);
     });
   });
 

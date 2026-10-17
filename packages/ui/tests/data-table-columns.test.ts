@@ -2,6 +2,8 @@
 /// <reference path="./vitest.d.ts" />
 import { describe, expect, it } from 'vitest';
 import {
+  columnOrder,
+  columnVisibility,
   decode,
   encode,
   fromHeaders,
@@ -87,9 +89,8 @@ describe('Showing and hiding a column', () => {
 describe('Saved preferences meet the current header', () => {
   it('apply the saved order and visibility', () => {
     const merged = merge(DECLARED, {
-      v: 1,
-      order: ['stock', 'name', 'warehouse', 'supplier'],
-      hidden: ['warehouse'],
+      columnOrder: ['sku', 'stock', 'name', 'warehouse', 'supplier'],
+      columnVisibility: { warehouse: false, supplier: true },
     });
     expect(keys(merged)).toEqual(['sku', 'stock', 'name', 'warehouse', 'supplier']);
     expect(hidden(merged)).toEqual(['warehouse']);
@@ -97,40 +98,78 @@ describe('Saved preferences meet the current header', () => {
 
   it('drop columns the header no longer has', () => {
     const merged = merge(DECLARED, {
-      v: 1,
-      order: ['gone', 'stock', 'name', 'warehouse', 'supplier'],
-      hidden: ['gone'],
+      columnOrder: ['gone', 'stock', 'name', 'warehouse', 'supplier'],
+      columnVisibility: { gone: false, supplier: true },
     });
     expect(keys(merged)).toEqual(['sku', 'stock', 'name', 'warehouse', 'supplier']);
     expect(hidden(merged)).toEqual([]);
   });
 
   it('place a newly declared column after its declared predecessor', () => {
-    const merged = merge(DECLARED, { v: 1, order: ['stock', 'name', 'supplier'], hidden: [] });
+    const merged = merge(DECLARED, {
+      columnOrder: ['stock', 'name', 'supplier'],
+      columnVisibility: { supplier: true },
+    });
     expect(keys(merged)).toEqual(['sku', 'stock', 'name', 'warehouse', 'supplier']);
   });
 
   it('put a new first movable column first', () => {
-    const merged = merge(DECLARED, { v: 1, order: ['stock', 'warehouse', 'supplier'], hidden: [] });
+    const merged = merge(DECLARED, {
+      columnOrder: ['stock', 'warehouse', 'supplier'],
+      columnVisibility: { supplier: true },
+    });
     expect(keys(merged)).toEqual(['sku', 'name', 'stock', 'warehouse', 'supplier']);
   });
 
-  it('cannot hide a fixed column', () => {
+  it('cannot move or hide a fixed column', () => {
     const merged = merge(DECLARED, {
-      v: 1,
-      order: ['name', 'warehouse', 'supplier', 'stock'],
-      hidden: ['sku'],
+      columnOrder: ['name', 'warehouse', 'sku', 'supplier', 'stock'],
+      columnVisibility: { sku: false, supplier: true },
     });
+    expect(keys(merged)).toEqual(['sku', 'name', 'warehouse', 'supplier', 'stock']);
     expect(hidden(merged)).toEqual([]);
   });
 
   it('give a column they do not know its declared visibility', () => {
-    const merged = merge(DECLARED, { v: 1, order: ['stock', 'name', 'warehouse'], hidden: [] });
+    const merged = merge(DECLARED, {
+      columnOrder: ['stock', 'name', 'warehouse'],
+      columnVisibility: {},
+    });
     expect(hidden(merged)).toEqual(['supplier']);
+  });
+
+  it('show a known column the visibility map leaves out, as TanStack does', () => {
+    const merged = merge(DECLARED, {
+      columnOrder: ['sku', 'name', 'warehouse', 'supplier', 'stock'],
+      columnVisibility: { name: false },
+    });
+    expect(hidden(merged)).toEqual(['name']);
   });
 
   it('leave the declared state alone when there is nothing saved', () => {
     expect(merge(DECLARED, null)).toBe(DECLARED);
+  });
+});
+
+describe('Columns are reported in TanStack Table’s state shapes', () => {
+  it('list every keyed column in order, fixed ones included', () => {
+    expect(columnOrder(move(DECLARED, 'stock', 0))).toEqual([
+      'sku',
+      'stock',
+      'name',
+      'warehouse',
+      'supplier',
+    ]);
+  });
+
+  it('map every keyed column to its visibility', () => {
+    expect(columnVisibility(setVisible(DECLARED, 'name', false))).toEqual({
+      sku: true,
+      name: false,
+      warehouse: true,
+      supplier: false,
+      stock: true,
+    });
   });
 });
 
@@ -140,8 +179,8 @@ describe('Preferences are stored in a versioned format', () => {
     const stored = encode(columns);
     expect(stored).toEqual({
       v: 1,
-      order: ['stock', 'name', 'warehouse', 'supplier'],
-      hidden: ['name', 'supplier'],
+      columnOrder: ['sku', 'stock', 'name', 'warehouse', 'supplier'],
+      columnVisibility: { sku: true, stock: true, name: false, warehouse: true, supplier: false },
     });
     expect(decode(JSON.stringify(stored))).toEqual(stored);
   });
@@ -153,10 +192,13 @@ describe('Preferences are stored in a versioned format', () => {
       'not json',
       'null',
       '[]',
-      '{"v":2,"order":[],"hidden":[]}',
-      '{"v":1,"order":"a","hidden":[]}',
-      '{"v":1,"order":[1],"hidden":[]}',
-      '{"v":1,"order":[]}',
+      '{"v":2,"columnOrder":[],"columnVisibility":{}}',
+      '{"v":1,"columnOrder":"a","columnVisibility":{}}',
+      '{"v":1,"columnOrder":[1],"columnVisibility":{}}',
+      '{"v":1,"columnOrder":[],"columnVisibility":{"a":"no"}}',
+      '{"v":1,"columnOrder":[],"columnVisibility":[]}',
+      '{"v":1,"columnOrder":[]}',
+      '{"v":1,"order":[],"hidden":[]}',
     ]) {
       expect(decode(raw), String(raw)).toBeNull();
     }
