@@ -15,6 +15,9 @@ const ko: LuxenTranslation = {
 
   showPassword: '비밀번호 표시',
 
+  // data-table
+  selectAllRows: '이 페이지의 모든 행 선택',
+
   increaseValue: '값 늘리기',
   decreaseValue: '값 줄이기',
 
