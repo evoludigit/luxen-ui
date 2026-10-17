@@ -109,16 +109,6 @@ export class SelectionState {
     return selected === visible.length ? 'all' : 'some';
   }
 
-  /** Whether a page should offer "select all `total` matching". */
-  offersAllMatching(visible: readonly string[], total: number): boolean {
-    return (
-      this.mode === 'multiple' &&
-      visible.length > 0 &&
-      total > visible.length &&
-      this.headerState(visible) === 'all'
-    );
-  }
-
   private _apply(key: string, selected: boolean): boolean {
     if (this._keys.has(key) === selected) return false;
     if (selected) this._keys.add(key);

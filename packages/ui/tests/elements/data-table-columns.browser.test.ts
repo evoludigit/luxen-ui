@@ -290,6 +290,24 @@ describe('Column widths follow the columns', () => {
   });
 });
 
+describe('Rows that span the table are left alone', () => {
+  it('keeps a full-width row, such as an empty state, when its column is hidden', async () => {
+    const el = await mount(`
+      <l-data-table>
+        <table class="l-table">
+          <thead><tr>
+            <th scope="col" data-key="a" data-hidden>A</th>
+            <th scope="col" data-key="b">B</th>
+          </tr></thead>
+          <tbody><tr><td colspan="2" class="empty">No rows</td></tr></tbody>
+        </table>
+      </l-data-table>`);
+    await settle(el);
+
+    expect(shown(host, 'empty')).toBe(true);
+  });
+});
+
 describe('The hiding stylesheet stays with the element', () => {
   it('reaches a table inside a shadow root', async () => {
     const outer = document.createElement('div');

@@ -177,7 +177,7 @@ The element fires `selection-change` with `rowSelection`, the inputs' `value`s m
 
 ### Columns the user picks
 
-Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` (`columnOrder`, `columnVisibility`) for the page to render. Add `persist-key` to keep the user's columns between visits.
+Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` (`columnOrder`, `columnVisibility`) for the page to render. Add `persist-key` to keep the user's columns between visits. The table hides a column by its position, so give the first column `data-fixed`: it carries the jump-to mark, and in the grid appearance the first and last cells carry the rounded corners. Rows with a spanning cell, such as an empty state, are left as they are.
 
 <ColumnManagerDemo />
 

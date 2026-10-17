@@ -165,15 +165,6 @@ describe('The header checkbox reflects the visible rows', () => {
 });
 
 describe('"All matching" stands for rows beyond the page', () => {
-  it('is offered only when every visible row is selected and more rows match', () => {
-    const s = new SelectionState('multiple');
-    s.setVisible(VISIBLE, true);
-    expect(s.offersAllMatching(VISIBLE, 5)).toBe(false);
-    expect(s.offersAllMatching(VISIBLE, 120)).toBe(true);
-    s.toggle('a');
-    expect(s.offersAllMatching(VISIBLE, 120)).toBe(false);
-  });
-
   it('is cleared by any change a user makes', () => {
     const s = new SelectionState('multiple');
     s.setVisible(VISIBLE, true);
@@ -187,11 +178,6 @@ describe('"All matching" stands for rows beyond the page', () => {
     s.allMatching = true;
     expect(s.clear()).toBe(true);
     expect(s.allMatching).toBe(false);
-  });
-
-  it('is not offered for an empty page', () => {
-    const s = new SelectionState('multiple');
-    expect(s.offersAllMatching([], 120)).toBe(false);
   });
 
   it('never applies to radios', () => {
