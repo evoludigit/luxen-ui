@@ -260,3 +260,38 @@ describe('Accessibility', () => {
     });
   });
 });
+
+describe('The manager finds its table whenever it arrives', () => {
+  const TABLE_ONLY = () => {
+    const scratch = document.createElement('div');
+    scratch.innerHTML = MARKUP();
+    return scratch.querySelector('l-data-table')!;
+  };
+
+  it('lists the columns of a table inserted after it', async () => {
+    host = document.createElement('div');
+    host.innerHTML = '<l-column-manager for="products"></l-column-manager>';
+    document.body.append(host);
+    await customElements.whenDefined('l-column-manager');
+    await settle();
+    expect(host.querySelectorAll('li[data-key]')).toHaveLength(0);
+
+    host.append(TABLE_ONLY());
+    await settle();
+    expect(items('Shown columns')).toEqual(['name', 'warehouse', 'stock']);
+  });
+
+  it('follows a new table rendered in place of the old one', async () => {
+    const old = await mount();
+    old.remove();
+    const table = TABLE_ONLY() as DataTable;
+    host.append(table);
+    await settle();
+
+    const next = waitForEvent(table, 'column-change') as Promise<ColumnChangeEvent>;
+    await userEvent.click(
+      list('Shown columns').querySelector('li[data-key="name"] [data-control="eye"]'),
+    );
+    expect((await next).columnVisibility.name).toBe(false);
+  });
+});

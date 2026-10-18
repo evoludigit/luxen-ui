@@ -345,6 +345,9 @@ export class DataTable extends LuxenElement {
     this._observer.observe(this, { childList: true, subtree: true });
     this._sync();
     this._setupTimer = window.setTimeout(() => this._sync(), 0);
+    // Internal: a column manager whose `for` names this table binds to it, even
+    // when the table arrives after the manager or replaces an earlier one.
+    this.dispatchEvent(new Event('columns-connect', { bubbles: true }));
   }
 
   override disconnectedCallback() {

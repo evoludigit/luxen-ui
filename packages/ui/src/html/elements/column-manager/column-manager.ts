@@ -52,6 +52,7 @@ export class ColumnManager extends LuxenElement {
   @state() private _announcement = '';
 
   private _table: DataTable | null = null;
+  private _root: Document | ShadowRoot | null = null;
   private _dragKey: string | null = null;
   private _focus: { key: string; control: Control } | null = null;
   private readonly _ids = {
@@ -62,11 +63,15 @@ export class ColumnManager extends LuxenElement {
 
   override connectedCallback() {
     super.connectedCallback();
+    this._root = this.getRootNode() as Document | ShadowRoot;
+    this._root.addEventListener('columns-connect', this._onTableConnect);
     this._bind();
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
+    this._root?.removeEventListener('columns-connect', this._onTableConnect);
+    this._root = null;
     this._unbind();
   }
 
@@ -91,6 +96,11 @@ export class ColumnManager extends LuxenElement {
     void customElements.whenDefined(tagName('data-table')).then(this._refresh);
     this._refresh();
   }
+
+  private _onTableConnect = (e: Event) => {
+    const table = e.target as Element;
+    if (this.for && table.id === this.for && table !== this._table) this._bind();
+  };
 
   private _unbind() {
     this._table?.removeEventListener('columns-update', this._refresh);
