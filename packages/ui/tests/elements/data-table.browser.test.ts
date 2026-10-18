@@ -901,3 +901,30 @@ describe('Accessibility', () => {
     });
   });
 });
+
+describe('A radio table never gets a header checkbox', () => {
+  const RADIOS = ROW('a', 'SKU-1', 'radio') + ROW('b', 'SKU-2', 'radio');
+
+  it('adds none while the body is empty, and none once radio rows arrive', async () => {
+    const el = await mount(TABLE({ attrs: 'selectable', rows: '' }));
+    expect(host.querySelectorAll('thead input')).toHaveLength(0);
+    el.querySelector('tbody')!.innerHTML = RADIOS;
+    await settle();
+    expect(host.querySelectorAll('thead input')).toHaveLength(0);
+  });
+
+  it('removes the checkbox it added when selectable is turned off', async () => {
+    const el = await mount(TABLE({ attrs: 'selectable' }));
+    el.selectable = false;
+    await settle();
+    expect(host.querySelectorAll('thead input')).toHaveLength(0);
+  });
+
+  it('removes the one it added when checkbox rows give way to radios', async () => {
+    const el = await mount(TABLE({ attrs: 'selectable' }));
+    expect(host.querySelectorAll('thead input')).toHaveLength(1);
+    el.querySelector('tbody')!.innerHTML = RADIOS;
+    await settle();
+    expect(host.querySelectorAll('thead input')).toHaveLength(0);
+  });
+});

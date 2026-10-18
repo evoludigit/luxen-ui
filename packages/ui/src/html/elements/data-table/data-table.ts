@@ -392,6 +392,7 @@ export class DataTable extends LuxenElement {
   private _sync() {
     this._syncColumns();
     if (this.selectable) this._syncSelection();
+    else this._removeAdded();
     this._syncNavigation();
   }
 
@@ -411,7 +412,10 @@ export class DataTable extends LuxenElement {
       this._warnIfUnnamed(input);
     }
 
-    const all = this._headerInput(mode);
+    // The mode is only known once a row input exists: until then, add nothing,
+    // or a radio table that renders its rows late would get a header checkbox.
+    if (mode === 'single') this._removeAdded();
+    const all = inputs.length > 0 || this._added ? this._headerInput(mode) : null;
     if (all) {
       const state = this._selection.headerState(this._visibleKeys(inputs));
       if (all.checked !== (state === 'all')) all.checked = state === 'all';
@@ -433,6 +437,11 @@ export class DataTable extends LuxenElement {
     cell.append(input);
     this._added = input;
     return input;
+  }
+
+  private _removeAdded() {
+    this._added?.remove();
+    this._added = null;
   }
 
   // --- Columns ---
