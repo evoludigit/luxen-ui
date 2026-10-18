@@ -642,6 +642,19 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(document.activeElement).toBe(after());
   });
 
+  it('keeps focus on the row when the page moves the row nodes, as a keyed list re-sorts', async () => {
+    await mount(TABLE({ attrs: 'navigable' }));
+    await userEvent.click(cellOf('b'));
+    await userEvent.keyboard('{ArrowDown}');
+
+    const tbody = host.querySelector('tbody')!;
+    for (const tr of Array.from(tbody.rows)) tbody.prepend(tr);
+    await settle();
+
+    expect(document.activeElement).toBe(rowOf('SKU-3'));
+    expect(bodyRows().filter((tr) => tr.getAttribute('tabindex') === '0')).toHaveLength(1);
+  });
+
   it("gives the rows' controls their own tabindex back when navigable is turned off", async () => {
     const rows = LINKED_ROWS.replace('href="#product-b"', 'href="#product-b" tabindex="-1"');
     const el = await mount(TABLE({ attrs: 'selectable navigable', rows }));
