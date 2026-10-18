@@ -225,3 +225,14 @@ describe('Hidden columns become :nth-child indices', () => {
     expect(hiddenIndices(['sku', 'name'], new Set())).toEqual([]);
   });
 });
+
+describe('Column keys that name Object.prototype members', () => {
+  it('keep their declared visibility when preferences leave them out', () => {
+    const declared = fromHeaders([
+      { key: 'toString', label: 'Text', fixed: false, hidden: true },
+      { key: 'constructor', label: 'Maker', fixed: false, hidden: false },
+    ]);
+    const merged = merge(declared, { columnOrder: [], columnVisibility: {} });
+    expect(merged.map((c) => c.visible)).toEqual([false, true]);
+  });
+});

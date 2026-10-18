@@ -317,7 +317,10 @@ export class DataTable extends LuxenElement {
     if (!this._defaults) this._syncColumns();
     this._applyPreferences({
       columnVisibility: Object.fromEntries(
-        (this._defaults ?? []).map((c) => [c.key, partial[c.key] ?? true]),
+        (this._defaults ?? []).map((c) => [
+          c.key,
+          Object.prototype.hasOwnProperty.call(partial, c.key) ? partial[c.key] !== false : true,
+        ]),
       ),
     });
   }

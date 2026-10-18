@@ -98,7 +98,10 @@ export function merge(
       key,
       label,
       fixed,
-      visible: visibility[key] ?? visible,
+      // Own keys only: a column keyed `toString` must not read Object.prototype's.
+      visible: Object.prototype.hasOwnProperty.call(visibility, key)
+        ? (visibility[key] ?? visible)
+        : visible,
     }));
   const byKey = new Map(movable.map((c) => [c.key, c]));
   const known = new Set(preferences.columnOrder.filter((key) => byKey.has(key)));

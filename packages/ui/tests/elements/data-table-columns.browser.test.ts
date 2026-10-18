@@ -110,6 +110,17 @@ describe('The page sets columns, the user changes them', () => {
     expect(el.columnVisibility).toEqual({ sku: true, name: false, warehouse: true, stock: true });
   });
 
+  it('reads only the keys a visibility set by the page really has', async () => {
+    const el = await mount(
+      TABLE(
+        '',
+        '<th scope="col" data-key="sku">SKU</th><th scope="col" data-key="toString">Text</th>',
+      ),
+    );
+    el.columnVisibility = {};
+    expect(el.columnVisibility).toEqual({ sku: true, toString: true });
+  });
+
   it('applies an order set by the page without reporting it', async () => {
     const el = await mount(TABLE());
     const listener = vi.fn();
