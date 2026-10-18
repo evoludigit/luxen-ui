@@ -534,6 +534,38 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(events).toHaveLength(1);
   });
 
+  it('selects every row on the page with Ctrl+A or Cmd+A on a row, reporting it once', async () => {
+    const el = await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(cellOf('a'));
+    const events: DataTableSelectionChangeEvent[] = [];
+    el.addEventListener('selection-change', (e) => events.push(e));
+
+    await userEvent.keyboard('{Control>}a{/Control}');
+
+    expect(checkedSkus()).toEqual(['a', 'b', 'c', 'd']);
+    expect(events).toHaveLength(1);
+    expect(events[0].allPageRowsSelected).toBe(true);
+    expect(getSelection()?.toString()).toBe('');
+
+    await userEvent.keyboard('{Escape}{Meta>}a{/Meta}');
+
+    expect(checkedSkus()).toEqual(['a', 'b', 'c', 'd']);
+    expect(getSelection()?.toString()).toBe('');
+  });
+
+  it('leaves Ctrl+A to the browser with radios', async () => {
+    const rows = ['a', 'b', 'c', 'd'].map((id, i) => ROW(id, `SKU-${i + 1}`, 'radio')).join('');
+    await mount(TABLE({ attrs: 'selectable navigable', rows }));
+    await userEvent.click(cellOf('a'));
+    const prevented = preventedOnPage('a');
+
+    await userEvent.keyboard('{Control>}a{/Control}');
+
+    expect(checkedSkus()).toEqual([]);
+    expect(prevented()).toEqual([false]);
+    getSelection()?.removeAllRanges();
+  });
+
   it('opens the focused row with Enter by following its row link', async () => {
     const rows = LINKED('a', 'SKU-1') + LINKED('b', 'SKU-2');
     await mount(TABLE({ attrs: 'navigable', rows }));
