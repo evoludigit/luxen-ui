@@ -234,6 +234,7 @@ export class DataTable extends LuxenElement {
   /** The focused row's place, for a neighbour to take over when the row goes. */
   private _focusIndex = -1;
   private _focusOutTimer = 0;
+  private _warnedKeyless = false;
   /** Rows this element gave a `tabindex`, removed again when navigation stops. */
   private readonly _tabRows = new Set<HTMLTableRowElement>();
   /** Controls in the rows, with the `tabindex` they had before this element wrote one. */
@@ -611,6 +612,7 @@ export class DataTable extends LuxenElement {
     }
     const rows = this._navRows();
     const keys = rows.map((tr) => this._rowKey(tr, rows));
+    this._warnIfKeyless(keys);
     const restore =
       this._focusInRows &&
       (document.activeElement === document.body || document.activeElement === null);
@@ -650,6 +652,16 @@ export class DataTable extends LuxenElement {
     for (const control of this._controlTabs.keys()) {
       if (!control.isConnected) this._controlTabs.delete(control);
     }
+  }
+
+  /** Rows kept by their place lose the focused row on a re-sort: say so once. */
+  private _warnIfKeyless(keys: string[]) {
+    if (this._warnedKeyless || !keys.some((key) => key.startsWith('@'))) return;
+    this._warnedKeyless = true;
+    // eslint-disable-next-line no-console
+    console.warn(
+      `<${this.localName} navigable>: rows have neither a selection input value nor an id; the focused row is kept by its position across re-renders. Add an id to each row.`,
+    );
   }
 
   private _releaseRows() {

@@ -508,7 +508,7 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
 
   it('keeps the page still on Space on a row without a selection input', async () => {
     const plain = (id: string, sku: string) =>
-      `<tr><th scope="row">${sku}</th><td>Item ${id}</td></tr>`;
+      `<tr id="p-${id}"><th scope="row">${sku}</th><td>Item ${id}</td></tr>`;
     await mount(
       TABLE({ attrs: 'navigable', head: '', rows: plain('a', 'SKU-1') + plain('b', 'SKU-2') }),
     );
@@ -696,6 +696,35 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
       await render(FOUR);
 
       expect(document.activeElement).toBe(document.body);
+    });
+  });
+
+  describe('Rows without a selection input keep their place by id', () => {
+    const PLAIN = (n: number, id = '') =>
+      `<tr${id && ` id="${id}"`}><th scope="row">SKU-${n}</th><td>Item ${n}</td></tr>`;
+    const plainRows = (ids: boolean, order = [1, 2, 3, 4]) =>
+      order.map((n) => PLAIN(n, ids ? `p-${n}` : '')).join('');
+
+    it('warns once when navigable rows have neither a selection value nor an id', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      await mount(TABLE({ attrs: 'navigable', head: '', rows: plainRows(false) }));
+
+      host.querySelector('tbody')!.innerHTML = plainRows(false, [4, 3, 2, 1]);
+      await settle();
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('id');
+      warn.mockRestore();
+    });
+
+    it('keeps the focused row by id across a re-sort', async () => {
+      await mount(TABLE({ attrs: 'navigable', head: '', rows: plainRows(true) }));
+      await userEvent.click(cellOf('2'));
+
+      host.querySelector('tbody')!.innerHTML = plainRows(true, [4, 3, 2, 1]);
+      await settle();
+
+      expect(document.activeElement?.id).toBe('p-2');
     });
   });
 
