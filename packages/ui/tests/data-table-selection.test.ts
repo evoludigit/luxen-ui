@@ -199,3 +199,32 @@ describe('The selection is reported as TanStack Table’s RowSelectionState', ()
     ]);
   });
 });
+
+describe('Shift with an arrow extends the selection from the focused row', () => {
+  it('selects the row it starts from and the row it reaches', () => {
+    const s = new SelectionState('multiple');
+    expect(s.extend(VISIBLE, 'a', 'b')).toBe(true);
+    expect(new Set(s.keys)).toEqual(new Set(['a', 'b']));
+  });
+
+  it('keeps extending as the focus moves on', () => {
+    const s = new SelectionState('multiple');
+    s.extend(VISIBLE, 'a', 'b');
+    s.extend(VISIBLE, 'b', 'c');
+    s.extend(VISIBLE, 'c', 'd');
+    expect(new Set(s.keys)).toEqual(new Set(['a', 'b', 'c', 'd']));
+  });
+
+  it('starts from the focused row when the anchor has left the visible rows', () => {
+    const s = new SelectionState('multiple');
+    s.toggle('z');
+    s.extend(VISIBLE, 'c', 'd');
+    expect(new Set(s.keys)).toEqual(new Set(['z', 'c', 'd']));
+  });
+
+  it('selects the reached row alone with radios', () => {
+    const s = new SelectionState('single');
+    s.extend(VISIBLE, 'a', 'b');
+    expect(s.keys).toEqual(['b']);
+  });
+});

@@ -47,12 +47,14 @@
     --_padding-inline: var(--l-spacing-3);
 
     /* Stacking inside the table: controls raised above a row link's overlay,
-       sticky body cells above those, the header above everything it scrolls
-       over, and the header's sticky corner on top. */
+       sticky body cells above those, a keyboard-focused row's ring above them,
+       the header above everything it scrolls over, and the header's sticky
+       corner on top. */
     --_z-raised: 1;
     --_z-sticky: 2;
-    --_z-header: 3;
-    --_z-corner: 4;
+    --_z-focus: 3;
+    --_z-header: 4;
+    --_z-corner: 5;
 
     inline-size: 100%;
     /* `separate`: sticky cells lose their borders under `collapse`. */
@@ -228,6 +230,41 @@
       & > tbody > tr:has(> * a[data-row-link]):hover > * {
         --_row-tint: var(--l-color-bg-state-hover);
       }
+    }
+
+    /* A row reached from the keyboard (`<l-data-table navigable>` gives the rows a
+       tabindex): tinted like a hovered row, marked like a jump-to row, and
+       ringed. An outline on the `<tr>` would sit under its sticky cells, so the
+       ring is an overlay on the row's first cell that is neither sticky nor a
+       selection cell (both can be containing blocks of their own), stretched
+       over the row like a row link, on a level above sticky cells and below
+       the header. */
+    & > tbody > tr[tabindex] {
+      position: relative;
+    }
+
+    & > tbody > tr[tabindex]:focus-visible {
+      outline: none;
+    }
+
+    & > tbody > tr[tabindex]:focus-visible > * {
+      --_row-tint: var(--l-color-bg-state-hover);
+    }
+
+    & > tbody > tr[tabindex]:focus-visible > :first-child {
+      --_row-mark: var(--l-focus-ring);
+    }
+
+    &
+      > tbody
+      > tr[tabindex]:focus-visible
+      > :nth-child(1 of :not([data-sticky], [data-select]))::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: var(--_z-focus);
+      border: 2px solid var(--l-focus-ring);
+      pointer-events: none;
     }
 
     /* Selected beats hovered: it is the state the user has to keep track of. */
