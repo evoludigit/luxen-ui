@@ -870,7 +870,9 @@ export class DataTable extends LuxenElement {
     if (
       !button ||
       !th?.matches('th[data-key]') ||
-      th.closest('thead')?.closest(this.localName) !== this
+      // The header of this element's own table, not of one nested in a cell.
+      th.closest('table')?.parentElement !== this ||
+      !th.closest('thead')
     ) {
       return;
     }

@@ -952,3 +952,16 @@ describe('A navigable table inside a shadow root', () => {
     expect(root.activeElement).toBe(rowOf('c'));
   });
 });
+
+describe('A table nested in a cell is not the data table', () => {
+  it('fires no sort-change for a keyed header of the inner table', async () => {
+    const inner = `<table><thead><tr><th data-key="inner"><button type="button">Inner</button></th></tr></thead></table>`;
+    const el = await mount(
+      TABLE({ head: '', rows: `<tr><th scope="row">SKU-1</th><td>${inner}</td></tr>` }),
+    );
+    const listener = vi.fn();
+    el.addEventListener('sort-change', listener);
+    await userEvent.click(host.querySelector('th[data-key="inner"] button'));
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
