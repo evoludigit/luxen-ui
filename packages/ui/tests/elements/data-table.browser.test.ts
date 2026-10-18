@@ -655,6 +655,45 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(bodyRows().filter((tr) => tr.getAttribute('tabindex') === '0')).toHaveLength(1);
   });
 
+  it('moves focus to the next row when the focused row is removed', async () => {
+    await mount(TABLE({ attrs: 'navigable' }));
+    await userEvent.click(cellOf('a'));
+    await userEvent.keyboard('{ArrowDown}');
+
+    rowOf('SKU-2').remove();
+    await settle();
+
+    expect(document.activeElement).toBe(rowOf('SKU-3'));
+    expect(rowOf('SKU-3').getAttribute('tabindex')).toBe('0');
+    expect(rowOf('SKU-1').getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('moves focus to the previous row when the last row is removed', async () => {
+    await mount(TABLE({ attrs: 'navigable' }));
+    await userEvent.click(cellOf('a'));
+    await userEvent.keyboard('{End}');
+
+    rowOf('SKU-4').remove();
+    await settle();
+
+    expect(document.activeElement).toBe(rowOf('SKU-3'));
+  });
+
+  it('leaves focus alone when the last row goes and an empty state takes its place', async () => {
+    await mount(TABLE({ attrs: 'navigable' }));
+    await userEvent.click(cellOf('a'));
+    await userEvent.keyboard('{ArrowDown}');
+    const tbody = host.querySelector('tbody')!;
+
+    tbody.innerHTML = '<tr><td colspan="4">No products</td></tr>';
+    await settle();
+    expect(tbody.querySelector('[tabindex]')).toBeNull();
+
+    tbody.innerHTML = ROW('a', 'SKU-1') + ROW('b', 'SKU-2') + ROW('c', 'SKU-3') + ROW('d', 'SKU-4');
+    await settle();
+    expect(document.activeElement?.closest('tr')).toBeNull();
+  });
+
   it("gives the rows' controls their own tabindex back when navigable is turned off", async () => {
     const rows = LINKED_ROWS.replace('href="#product-b"', 'href="#product-b" tabindex="-1"');
     const el = await mount(TABLE({ attrs: 'selectable navigable', rows }));
