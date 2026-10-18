@@ -261,6 +261,14 @@
       --_row-mark: var(--l-focus-ring);
     }
 
+    /* Forced colors drop background images: each cell gets an outline instead. */
+    @media (forced-colors: active) {
+      & > tbody > tr[tabindex]:focus-visible > * {
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+      }
+    }
+
     /* Selected beats hovered: it is the state the user has to keep track of. */
     & > tbody > tr:has(> [data-select] input:checked) > * {
       --_row-tint: var(--l-color-bg-state-selected);

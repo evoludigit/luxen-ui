@@ -1,7 +1,7 @@
 // oxlint-disable-next-line typescript/triple-slash-reference -- ambient *.css module for the side-effect CSS imports below.
 /// <reference path="./a11y/a11y-env.d.ts" />
 import { afterEach, describe, expect, it } from 'vite-plus/test';
-import { page } from 'vite-plus/test/browser/context';
+import { cdp, page, server } from 'vite-plus/test/browser';
 import '../../src/html/elements/data-table/index.js';
 import type { DataTable } from '../../src/html/elements/data-table/data-table.js';
 import { userEvent } from './support/user-event.js';
@@ -142,4 +142,32 @@ describe('With navigable, a keyboard-focused row is ringed in every layout', () 
     expect(displayed(tr)).toHaveLength(2);
     expect(ringedCells(tr)).toEqual(displayed(tr));
   });
+});
+
+describe('In forced colors, the focused row is outlined instead', () => {
+  const emulate = (value: 'active' | 'none') =>
+    cdp().send('Emulation.setEmulatedMedia', { features: [{ name: 'forced-colors', value }] });
+
+  afterEach(async () => {
+    if (server.browser === 'chromium') await emulate('none');
+  });
+
+  // Forced colors drop background images, ring layers included. Only Chromium
+  // can emulate the mode; a real Windows High Contrast check is manual.
+  it.skipIf(server.browser !== 'chromium')(
+    "outlines the focused row's visible cells in forced colors, with a column hidden",
+    async () => {
+      const el = await mount(TABLE());
+      el.columnVisibility = { sku: false };
+      await emulate('active');
+      expect(matchMedia('(forced-colors: active)').matches).toBe(true);
+
+      const tr = await focusSecondRow();
+
+      for (const cell of displayed(tr)) {
+        const style = getComputedStyle(cell);
+        expect([style.outlineStyle, style.outlineWidth]).toEqual(['solid', '2px']);
+      }
+    },
+  );
 });
