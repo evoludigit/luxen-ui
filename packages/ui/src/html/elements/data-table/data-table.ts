@@ -1,6 +1,7 @@
 import { property } from 'lit/decorators.js';
 import { LuxenElement } from '../../shared/luxen-element.js';
 import { LocalizeController } from '../../shared/localize.js';
+import { focusFromInput } from '../../shared/input-modality.js';
 import { cls, getPrefix } from '../../registry.js';
 import { rowTarget } from './row-navigation.js';
 import { nextSorting, sortingFromHeaders, type SortingState } from './sort-state.js';
@@ -631,7 +632,7 @@ export class DataTable extends LuxenElement {
     this._focusIndex = stop;
     this._rove(rows, stop);
     if (!restore) return;
-    if (rows.length > 0) rows[stop].focus();
+    if (rows.length > 0) focusFromInput(rows[stop]);
     // Nothing can take focus: drop the claim, so rows that come back never take it.
     else this._focusInRows = false;
   }
@@ -680,7 +681,7 @@ export class DataTable extends LuxenElement {
   private _focusRow(tr: HTMLTableRowElement) {
     this._focusKey = this._rowKey(tr);
     this._syncNavigation();
-    tr.focus();
+    focusFromInput(tr);
   }
 
   private _onFocusIn = (e: FocusEvent) => {
