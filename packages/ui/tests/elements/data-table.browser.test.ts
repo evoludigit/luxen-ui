@@ -520,6 +520,31 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(document.activeElement).toBe(after());
   });
 
+  it("gives the rows' controls their own tabindex back when navigable is turned off", async () => {
+    const rows = LINKED_ROWS.replace('href="#product-b"', 'href="#product-b" tabindex="-1"');
+    const el = await mount(TABLE({ attrs: 'selectable navigable', rows }));
+    rowOf('SKU-4').focus();
+
+    el.navigable = false;
+    await settle();
+
+    expect(linkOf('SKU-2').getAttribute('tabindex')).toBe('-1');
+    const others = [...host.querySelectorAll('tbody :is(a, input)')].filter(
+      (c) => c !== linkOf('SKU-2'),
+    );
+    expect(others.filter((c) => c.hasAttribute('tabindex'))).toEqual([]);
+  });
+
+  it('makes a row the tab stop when one of its controls is clicked', async () => {
+    await mount(TABLE({ attrs: 'selectable navigable', rows: LINKED_ROWS }));
+
+    await userEvent.click(row('SKU-4'));
+
+    expect(rowOf('SKU-4').getAttribute('tabindex')).toBe('0');
+    expect(linkOf('SKU-4').hasAttribute('tabindex')).toBe(false);
+    expect(linkOf('SKU-1').getAttribute('tabindex')).toBe('-1');
+  });
+
   it('removes the tabindex it wrote when navigable is turned off', async () => {
     const el = await mount(TABLE({ attrs: 'navigable' }));
 

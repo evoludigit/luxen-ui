@@ -638,6 +638,8 @@ export class DataTable extends LuxenElement {
   private _releaseRows() {
     for (const tr of this._tabRows) tr.removeAttribute('tabindex');
     this._tabRows.clear();
+    for (const [control, authored] of this._controlTabs) setTabIndex(control, authored);
+    this._controlTabs.clear();
   }
 
   private _focusRow(tr: HTMLTableRowElement) {
