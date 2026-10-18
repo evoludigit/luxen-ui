@@ -671,19 +671,40 @@ export class DataTable extends LuxenElement {
 
   /** Keys pressed on a row itself; keys on a control inside it stay the control's. */
   private _onRowKey(e: KeyboardEvent, tr: HTMLTableRowElement) {
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
-    const rows = this._navRows();
-    const current = rows.indexOf(tr);
-    const target = rowTarget(e.key, current, rows.length);
-    if (target !== null) {
-      e.preventDefault();
-      const next = rows[target];
-      if (e.shiftKey) this._extendRun(tr, next);
-      else this._selection.endRun();
-      this._focusRow(next);
+    if (e.altKey) return;
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key.toLowerCase() === 'a') this._selectPage(e);
       return;
     }
-    if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+    if (!this._onMoveKey(e, tr)) this._onActionKey(e, tr);
+  }
+
+  /** The keys that move between rows; with Shift they extend the selection run. */
+  private _onMoveKey(e: KeyboardEvent, tr: HTMLTableRowElement): boolean {
+    const rows = this._navRows();
+    const target = rowTarget(e.key, rows.indexOf(tr), rows.length);
+    if (target === null) return false;
+    e.preventDefault();
+    const next = rows[target];
+    if (e.shiftKey) this._extendRun(tr, next);
+    else this._selection.endRun();
+    this._focusRow(next);
+    return true;
+  }
+
+  /** Ctrl or Cmd with A: selects the page's rows, as the header checkbox does. */
+  private _selectPage(e: KeyboardEvent) {
+    if (!this.selectable || this._selection.mode !== 'multiple') return;
+    e.preventDefault();
+    if (this._selection.setVisible(this._visibleKeys(), true)) {
+      this._sync();
+      this._reportSelection();
+    }
+  }
+
+  /** Space, Enter and Escape on a row. Shift alone keeps a selection run going. */
+  private _onActionKey(e: KeyboardEvent, tr: HTMLTableRowElement) {
+    if (e.key === 'Shift') return;
     this._selection.endRun();
     if (e.key === ' ') {
       e.preventDefault();
