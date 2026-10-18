@@ -222,6 +222,24 @@ describe('With persist-key, the user’s columns are kept', () => {
     expect((await next).columnOrder).toEqual(['sku', 'stock', 'name', 'warehouse']);
   });
 
+  it('switches to the columns stored under a new key', async () => {
+    localStorage.setItem(
+      'l-data-table:invoices',
+      JSON.stringify({ v: 1, columnOrder: [], columnVisibility: { name: false } }),
+    );
+    const el = await mount(TABLE('persist-key="products"'));
+    expect(shown(host, 'name')).toBe(true);
+
+    const next = waitForEvent(el, 'column-change') as Promise<ColumnChangeEvent>;
+    el.persistKey = 'invoices';
+    expect((await next).columnVisibility.name).toBe(false);
+    expect(shown(host, 'name')).toBe(false);
+
+    el.persistKey = 'reports';
+    await settle(el);
+    expect(shown(host, 'name')).toBe(true);
+  });
+
   it('ignores stored data it cannot read', async () => {
     localStorage.setItem('l-data-table:products', '{not json');
     const el = await mount(TABLE('persist-key="products"'));

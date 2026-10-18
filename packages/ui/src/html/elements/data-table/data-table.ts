@@ -208,9 +208,15 @@ export class DataTable extends LuxenElement {
   @property({ type: Boolean, reflect: true })
   navigable = false;
 
-  /** Keeps the user's column order and visibility in `localStorage` under this name. */
+  /**
+   * Keeps the user's column order and visibility in `localStorage` under this
+   * name. Changing it applies the columns stored under the new name.
+   */
   @property({ attribute: 'persist-key', reflect: true })
   persistKey?: string;
+
+  /** The storage key the current columns were restored from. */
+  private _restoredKey: string | null = null;
 
   /** The header's columns as first seen, plus any added since: what a reset restores. */
   private _defaults: Column[] | null = null;
@@ -359,7 +365,9 @@ export class DataTable extends LuxenElement {
 
   // LocalizeController requests an update when the language changes.
   override updated(changed: Map<string, unknown>) {
-    if (changed.has('selectable') || changed.has('navigable')) this._queueSync();
+    if (changed.has('selectable') || changed.has('navigable') || changed.has('persistKey')) {
+      this._queueSync();
+    }
     const label = this._localize.term('selectAllRows');
     if (this._added && this._added.getAttribute('aria-label') !== label) {
       this._added.setAttribute('aria-label', label);
@@ -477,10 +485,14 @@ export class DataTable extends LuxenElement {
     const labels = new Map(declarations.map((d) => [d.key, d.label]));
     this._defaults = this._defaults.map((c) => ({ ...c, label: labels.get(c.key) ?? c.label }));
 
-    if (first) {
-      const stored = this._read();
-      this._setColumns(merge(this._defaults, stored));
-      if (stored && JSON.stringify(this._columns) !== JSON.stringify(this._defaults)) {
+    // On the first sync, and whenever persist-key changes, the stored columns
+    // replace the current ones and are reported once, for the page to render.
+    const key = this._storageKey;
+    if (first || key !== this._restoredKey) {
+      this._restoredKey = key;
+      const before = first ? this._defaults : this._columns;
+      this._setColumns(merge(this._defaults, this._read()));
+      if (JSON.stringify(this._columns) !== JSON.stringify(before)) {
         queueMicrotask(() => this.dispatchEvent(new ColumnChangeEvent(this._columns)));
       }
     } else {
