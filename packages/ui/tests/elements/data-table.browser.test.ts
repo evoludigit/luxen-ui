@@ -584,6 +584,43 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(followed).toEqual(['#product-b']);
   });
 
+  /** The modifiers of each click on a row link, which is kept from navigating. */
+  const recordLinkClicks = () => {
+    const clicks: boolean[][] = [];
+    host.addEventListener('click', (e) => {
+      if (!(e.target as Element).closest('a')) return;
+      e.preventDefault();
+      clicks.push([e.ctrlKey, e.metaKey, e.shiftKey]);
+    });
+    return clicks;
+  };
+
+  it('opens the row link with the modifiers held, so it can open in a new tab', async () => {
+    await mount(TABLE({ attrs: 'navigable', rows: LINKED_ROWS }));
+    const clicks = recordLinkClicks();
+    rowOf('SKU-2').focus();
+
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+
+    expect(clicks).toEqual([
+      [true, false, false],
+      [false, true, false],
+      [false, false, true],
+    ]);
+  });
+
+  it('navigates once on Enter when the row link itself has focus', async () => {
+    await mount(TABLE({ attrs: 'navigable', rows: LINKED_ROWS }));
+    const clicks = recordLinkClicks();
+    linkOf('SKU-2').focus();
+
+    await userEvent.keyboard('{Enter}');
+
+    expect(clicks).toHaveLength(1);
+  });
+
   it('leaves keys alone while focus is on a control inside a row', async () => {
     await mount(TABLE({ attrs: 'selectable navigable' }));
     await userEvent.click(row('SKU-1'));
