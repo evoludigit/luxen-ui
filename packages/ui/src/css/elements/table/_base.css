@@ -16,10 +16,12 @@
    * Rows are sized on the control scale (`--l-size-control-*`) plus a fixed
    * block padding, so a control of the table's size fits a row exactly.
    *
-   * Row tints (hover, selected, stripes, the jump-to mark) are background
-   * *images* layered over a background *color* that stays transparent except
-   * on sticky cells, which must be opaque to hide what scrolls under them. The
-   * jump-to mark is a layer too, not a box-shadow: the sticky-column shadow
+   * Row states (hover, selected, stripes, the jump-to mark, a focused row's
+   * ring) are background *images* layered over a background *color* that stays
+   * transparent except on sticky cells, which must be opaque to hide what
+   * scrolls under them. Every cell paints its own part, so a state survives
+   * hidden columns and shows on sticky cells' opaque backgrounds; and the mark
+   * and the ring are layers, not box-shadows, because the sticky-column shadow
    * animation owns `box-shadow` on sticky cells.
    *
    * A row link stretches over its row with an absolutely positioned `::after`,
@@ -47,14 +49,12 @@
     --_padding-inline: var(--l-spacing-3);
 
     /* Stacking inside the table: controls raised above a row link's overlay,
-       sticky body cells above those, a keyboard-focused row's ring above them,
-       the header above everything it scrolls over, and the header's sticky
-       corner on top. */
+       sticky body cells above those, the header above everything it scrolls
+       over, and the header's sticky corner on top. */
     --_z-raised: 1;
     --_z-sticky: 2;
-    --_z-focus: 3;
-    --_z-header: 4;
-    --_z-corner: 5;
+    --_z-header: 3;
+    --_z-corner: 4;
 
     inline-size: 100%;
     /* `separate`: sticky cells lose their borders under `collapse`. */
@@ -85,6 +85,7 @@
 
     & > :where(thead, tbody, tfoot) > :where(tr) > :where(th, td) {
       /* Per-cell layers; the row states below set them. */
+      --_row-ring: transparent;
       --_row-tint: transparent;
       --_row-stripe: transparent;
       --_row-mark: transparent;
@@ -98,20 +99,30 @@
       padding-inline: var(--_padding-inline);
       background-color: var(--_cell-background);
       background-image:
+        linear-gradient(var(--_row-ring), var(--_row-ring)),
+        linear-gradient(var(--_row-ring), var(--_row-ring)),
         linear-gradient(var(--_row-mark), var(--_row-mark)),
         linear-gradient(var(--_row-tint), var(--_row-tint)),
         linear-gradient(var(--_row-stripe), var(--_row-stripe));
       background-repeat: no-repeat;
       background-size:
+        100% 2px,
+        100% 2px,
         3px 100%,
         100% 100%,
         100% 100%;
-      background-position: left center;
+      background-position:
+        top,
+        bottom,
+        left center;
       text-align: start;
       vertical-align: middle;
 
       &:dir(rtl) {
-        background-position: right center;
+        background-position:
+          top,
+          bottom,
+          right center;
       }
     }
 
@@ -234,37 +245,20 @@
 
     /* A row reached from the keyboard (`<l-data-table navigable>` gives the rows a
        tabindex): tinted like a hovered row, marked like a jump-to row, and
-       ringed. An outline on the `<tr>` would sit under its sticky cells, so the
-       ring is an overlay on the row's first cell that is neither sticky nor a
-       selection cell (both can be containing blocks of their own), stretched
-       over the row like a row link, on a level above sticky cells and below
-       the header. */
-    & > tbody > tr[tabindex] {
-      position: relative;
-    }
-
+       ringed. An outline on the `<tr>` would sit under its sticky cells, so
+       every cell draws its own stretch of the ring's block-start and block-end
+       lines; the start mark is extra, not the indicator. */
     & > tbody > tr[tabindex]:focus-visible {
       outline: none;
     }
 
     & > tbody > tr[tabindex]:focus-visible > * {
       --_row-tint: var(--l-color-bg-state-hover);
+      --_row-ring: var(--l-focus-ring);
     }
 
     & > tbody > tr[tabindex]:focus-visible > :first-child {
       --_row-mark: var(--l-focus-ring);
-    }
-
-    &
-      > tbody
-      > tr[tabindex]:focus-visible
-      > :nth-child(1 of :not([data-sticky], [data-select]))::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      z-index: var(--_z-focus);
-      border: 2px solid var(--l-focus-ring);
-      pointer-events: none;
     }
 
     /* Selected beats hovered: it is the state the user has to keep track of. */
