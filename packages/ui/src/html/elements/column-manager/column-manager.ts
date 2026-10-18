@@ -34,6 +34,7 @@ type Control = 'up' | 'down' | 'eye';
  * @cssClass .l-column-manager-item - One column; `data-dragging` while it is dragged.
  * @cssClass .l-column-manager-control - A move or eye button (`data-control="up|down|eye"`).
  * @cssClass .l-column-manager-reset - The reset button.
+ * @cssClass .l-column-manager-hint - Placeholder in an empty list, where a column can be dropped.
  *
  * @customElement l-column-manager
  */

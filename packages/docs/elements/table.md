@@ -54,7 +54,7 @@ A data table on a native `<table>`, for lists of records.
 
 A stylesheet, no JavaScript. The states it shows are the platform's: `aria-sort` for the sorted column, a checked checkbox for a selected row, a URL fragment for the row to jump to. The same markup works in a server-rendered page and in a framework template.
 
-Wrap the table in `<l-data-table>` to add what HTML lacks: a reported sort, and with `selectable`, a header checkbox, Shift ranges and a selection that outlives the page. It renders nothing else; the page keeps rendering the rows.
+Wrap the table in `<l-data-table>` to add what HTML lacks: a reported sort; with `selectable`, a header checkbox, Shift ranges and a selection that outlives the page; column order and visibility; and with `navigable`, rows reached from the keyboard. It renders nothing else; the page keeps rendering the rows.
 
 ## Options
 
@@ -197,7 +197,7 @@ Focus moves between rows, never cells: the rows keep the `row` role and the tabl
 
 ### Columns the user picks
 
-Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` (`columnOrder`, `columnVisibility`) for the page to render. Add `persist-key` to keep the user's columns between visits. The table hides a column by its position, so give the first column `data-fixed`: it carries the jump-to mark, and in the grid appearance the first and last cells carry the rounded corners. Rows with a spanning cell, such as an empty state, are left as they are.
+Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` (`columnOrder`, `columnVisibility`) for the page to render. Add `persist-key` to keep the user's columns between visits, in `localStorage` under `l-data-table:` and the key (your own prefix if you renamed it), as `{ v: 1, columnOrder, columnVisibility }`. Restored columns, and those of a new `persist-key`, arrive once in `column-change`, so listen from the first load to render their order. The table hides a column by its position, so give the first column `data-fixed`: it carries the jump-to mark, and in the grid appearance the first and last cells carry the rounded corners. Rows with a spanning cell, such as an empty state, are left as they are.
 
 <ColumnManagerDemo />
 
@@ -400,7 +400,7 @@ import 'luxen-ui/column-manager';
 
 :::
 
-The CSS covers the table itself; the JS import upgrades `l-data-table` with sorting, selection and keyboard navigation. Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l-button` (`luxen-ui/css/button`).
+The CSS covers the table itself; the JS import upgrades `l-data-table` with sorting, selection, columns and keyboard navigation. Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l-button` (`luxen-ui/css/button`).
 
 ### Attributes
 

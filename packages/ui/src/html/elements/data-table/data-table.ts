@@ -126,7 +126,7 @@ const FOCUSABLE =
   'a[href], button, input, select, textarea, summary, iframe, [contenteditable]:not([contenteditable="false"]), [tabindex]:not(tr)';
 
 /**
- * @summary Adds sorting and row selection to the `.l-table` it wraps, leaving rendering to the page.
+ * @summary Adds sorting, row selection, column order and visibility, and opt-in row navigation to the `.l-table` it wraps, leaving rendering to the page.
  *
  * The table stays the page's: the element reads its markup and reports what
  * the user did. A sortable header — a `<th data-key>` holding a `<button>` —
@@ -285,6 +285,7 @@ export class DataTable extends LuxenElement {
     this._selection.allMatching = value;
   }
 
+  /** Clears the selection, rows on other pages included. No event. */
   clearSelection(): void {
     this._selection.clear();
     this._queueSync();
@@ -508,8 +509,9 @@ export class DataTable extends LuxenElement {
 
   /**
    * Applies columns and, when they differ, tells a column manager through the
-   * internal `columns-update` event — a page setting `columns` fires no public
-   * event, but the manager must still follow.
+   * internal `columns-update` event — a page setting `columnOrder` or
+   * `columnVisibility`, or calling `resetColumns()`, fires no public event, but
+   * the manager must still follow.
    */
   private _setColumns(columns: readonly Column[]) {
     const changed = JSON.stringify(columns) !== JSON.stringify(this._columns);
