@@ -611,13 +611,21 @@ export class DataTable extends LuxenElement {
     }
     const rows = this._navRows();
     const keys = rows.map((tr) => this._rowKey(tr, rows));
-    let stop = this._focusKey === null ? -1 : keys.indexOf(this._focusKey);
     const restore =
       this._focusInRows &&
       (document.activeElement === document.body || document.activeElement === null);
-    if (stop === -1) stop = 0;
+    let stop = this._focusKey === null ? 0 : keys.indexOf(this._focusKey);
+    if (stop === -1) {
+      // The row went: its neighbour takes over, the next one or the previous if it was last.
+      stop = Math.min(Math.max(this._focusIndex, 0), rows.length - 1);
+      this._focusKey = keys[stop] ?? null;
+    }
+    this._focusIndex = stop;
     this._rove(rows, stop);
-    if (restore) rows[stop].focus();
+    if (!restore) return;
+    if (rows.length > 0) rows[stop].focus();
+    // Nothing can take focus: drop the claim, so rows that come back never take it.
+    else this._focusInRows = false;
   }
 
   /**
