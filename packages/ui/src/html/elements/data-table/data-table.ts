@@ -708,6 +708,11 @@ export class DataTable extends LuxenElement {
   /** Keys pressed on a row itself; keys on a control inside it stay the control's. */
   private _onRowKey(e: KeyboardEvent, tr: HTMLTableRowElement) {
     if (e.altKey) return;
+    if (e.key === 'Enter') {
+      this._selection.endRun();
+      this._followRowLink(e, tr);
+      return;
+    }
     if (e.ctrlKey || e.metaKey) {
       if (e.key.toLowerCase() === 'a') this._selectPage(e);
       return;
@@ -738,7 +743,28 @@ export class DataTable extends LuxenElement {
     }
   }
 
-  /** Space, Enter and Escape on a row. Shift alone keeps a selection run going. */
+  /**
+   * Enter follows the row link as a click with the same modifiers would, so a
+   * router or the browser can open the record in a new tab or window.
+   */
+  private _followRowLink(e: KeyboardEvent, tr: HTMLTableRowElement) {
+    const link = tr.querySelector<HTMLAnchorElement>('a[data-row-link]');
+    if (!link) return;
+    e.preventDefault();
+    link.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: window,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        shiftKey: e.shiftKey,
+      }),
+    );
+  }
+
+  /** Space and Escape on a row. Shift alone keeps a selection run going. */
   private _onActionKey(e: KeyboardEvent, tr: HTMLTableRowElement) {
     if (e.key === 'Shift') return;
     this._selection.endRun();
@@ -748,11 +774,6 @@ export class DataTable extends LuxenElement {
       if (!input) return;
       this._shiftSpace = e.shiftKey;
       input.click();
-    } else if (e.key === 'Enter') {
-      const link = tr.querySelector<HTMLAnchorElement>('a[data-row-link]');
-      if (!link) return;
-      e.preventDefault();
-      link.click();
     } else if (
       e.key === 'Escape' &&
       this.selectable &&
