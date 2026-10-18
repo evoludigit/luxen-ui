@@ -1,0 +1,125 @@
+@layer components {
+  /**
+   * Pagination — `.l-pagination` on a native `<nav>` holding an optional range
+   * line and an `<ol>` of page links.
+   *
+   * CSS only. A page is a link and the URL is the state, so it works with no
+   * script and in any router: the current page carries `aria-current="page"`,
+   * and a previous or next step that leads nowhere is a link without `href`,
+   * which the browser keeps out of the tab order. Steps are marked with
+   * `data-step` rather than `rel`, which HTML only allows with an `href`.
+   *
+   * Markup contract:
+   *   <nav class="l-pagination" aria-label="Pagination">
+   *     <p>51–100 of 1,284</p>
+   *     <ol>
+   *       <li><a href="?page=1" data-step="previous">Previous</a></li>
+   *       <li><a href="?page=1">1</a></li>
+   *       <li><a href="?page=2" aria-current="page">2</a></li>
+   *       <li aria-hidden="true">…</li>
+   *       <li><a href="?page=3" data-step="next">Next</a></li>
+   *     </ol>
+   *   </nav>
+   */
+
+  .l-pagination {
+    --_icon-previous: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M10 4 6 8l4 4' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --_icon-next: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 4l4 4-4 4' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--l-spacing-2) var(--l-spacing-4);
+    color: var(--l-color-text-primary);
+    font-size: var(--l-text-sm);
+    line-height: var(--l-text-sm--line-height);
+    font-variant-numeric: tabular-nums;
+
+    & > p {
+      flex: 1 1 auto;
+      margin: 0;
+      color: var(--l-color-text-secondary);
+    }
+
+    & > ol {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--l-spacing-1);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    & > ol > li {
+      display: flex;
+    }
+
+    /* The gap marker between ranges of pages. */
+    & > ol > li[aria-hidden='true'] {
+      padding-inline: var(--l-spacing-1);
+      color: var(--l-color-text-tertiary);
+    }
+
+    & a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--l-spacing-1);
+      box-sizing: border-box;
+      min-inline-size: var(--l-size-control-sm);
+      block-size: var(--l-size-control-sm);
+      padding-inline: var(--l-spacing-2);
+      border-radius: var(--l-radius-md);
+      color: inherit;
+      font-weight: var(--l-font-weight-normal);
+      text-decoration: none;
+
+      &:focus-visible {
+        outline: 2px solid var(--l-focus-ring);
+        outline-offset: 2px;
+      }
+
+      @media (hover: hover) {
+        &[href]:not([aria-current='page']):hover {
+          background-color: var(--l-color-bg-state-hover);
+        }
+      }
+    }
+
+    & a[aria-current='page'] {
+      background-color: var(--l-color-bg-state-selected);
+      font-weight: var(--l-font-weight-semibold);
+    }
+
+    /* A step that leads nowhere: no href, so no focus and no hover; dimmed like
+       the library's other disabled controls. */
+    & a:not([href]) {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    & a[data-step='previous']::before,
+    & a[data-step='next']::after {
+      content: '';
+      flex: none;
+      inline-size: 1em;
+      block-size: 1em;
+      background-color: currentColor;
+      mask: var(--_icon) center / contain no-repeat;
+    }
+
+    & a[data-step='previous']::before {
+      --_icon: var(--_icon-previous);
+    }
+
+    & a[data-step='next']::after {
+      --_icon: var(--_icon-next);
+    }
+
+    &:dir(rtl) a[data-step]::before,
+    &:dir(rtl) a[data-step]::after {
+      scale: -1 1;
+    }
+  }
+}
