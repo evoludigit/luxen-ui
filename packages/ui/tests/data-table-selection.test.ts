@@ -222,6 +222,21 @@ describe('Shift with an arrow extends the selection from the focused row', () =>
     expect(new Set(s.keys)).toEqual(new Set(['z', 'c', 'd']));
   });
 
+  it('starts from the focused row when the anchor is a row the focus has left', () => {
+    const s = new SelectionState('multiple');
+    s.toggle('a');
+    s.extend(VISIBLE, 'c', 'd');
+    expect(new Set(s.keys)).toEqual(new Set(['a', 'c', 'd']));
+  });
+
+  it('selects from the focused row even when that row was just cleared', () => {
+    const s = new SelectionState('multiple');
+    s.toggle('a');
+    s.toggle('a');
+    s.extend(VISIBLE, 'a', 'b');
+    expect(new Set(s.keys)).toEqual(new Set(['a', 'b']));
+  });
+
   it('selects the reached row alone with radios', () => {
     const s = new SelectionState('single');
     s.extend(VISIBLE, 'a', 'b');
