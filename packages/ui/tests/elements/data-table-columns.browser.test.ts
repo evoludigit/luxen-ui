@@ -328,3 +328,26 @@ describe('The hiding stylesheet stays with the element', () => {
     expect(document.adoptedStyleSheets.length).toBe(sheets - 1);
   });
 });
+
+describe('Columns set before the table is in the page', () => {
+  it('are hidden once it is inserted', async () => {
+    await customElements.whenDefined('l-data-table');
+    const scratch = document.createElement('div');
+    scratch.innerHTML = TABLE();
+    const el = scratch.querySelector<DataTable>('l-data-table')!;
+    el.columnVisibility = { name: false };
+    host = scratch;
+    document.body.append(host);
+    await settle(el);
+    expect(shown(host, 'name')).toBe(false);
+  });
+
+  it('are hidden after the table leaves and comes back', async () => {
+    const el = await mount(TABLE());
+    el.columnVisibility = { name: false };
+    el.remove();
+    host.append(el);
+    await settle(el);
+    expect(shown(host, 'name')).toBe(false);
+  });
+});

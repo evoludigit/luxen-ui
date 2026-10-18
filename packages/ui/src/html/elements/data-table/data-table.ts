@@ -561,14 +561,15 @@ export class DataTable extends LuxenElement {
       )
       .join('\n');
     if (text === this._sheetText) return;
-    this._sheetText = text;
     if (!this._sheet) {
+      // Detached, the root is no document: the sheet is adopted on connect.
       const root = this.getRootNode() as Document | ShadowRoot;
       if (!('adoptedStyleSheets' in root)) return;
       this._sheet = new CSSStyleSheet();
       this._sheetRoot = root;
       root.adoptedStyleSheets = [...root.adoptedStyleSheets, this._sheet];
     }
+    this._sheetText = text;
     this._sheet.replaceSync(text);
   }
 
