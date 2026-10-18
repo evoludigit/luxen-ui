@@ -328,6 +328,16 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     page.getByRole('cell', { name: `Item ${id}`, exact: true }).element();
   const focusedSku = () =>
     (document.activeElement as HTMLElement).closest('tr')?.querySelector('th')?.textContent?.trim();
+  const LINKED_ROWS = ['a', 'b', 'c', 'd'].map((id, i) => LINKED(id, `SKU-${i + 1}`)).join('');
+  /** A linked, selectable table between two focusable elements. */
+  const mountBetween = (attrs = 'selectable navigable') =>
+    mount(`
+      <button type="button" id="before">Before</button>
+      ${TABLE({ attrs, rows: LINKED_ROWS })}
+      <input id="after" aria-label="After">`);
+  const before = () => host.querySelector<HTMLButtonElement>('#before')!;
+  const after = () => host.querySelector<HTMLInputElement>('#after')!;
+  const linkOf = (sku: string) => rowOf(sku).querySelector('a')!;
 
   it('makes one row the tab stop of the body: the first one, until another is reached', async () => {
     await mount(TABLE({ attrs: 'navigable' }));
@@ -472,6 +482,42 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(rowOf('SKU-3').getAttribute('tabindex')).toBe('0');
     expect(document.activeElement).toBe(rowOf('SKU-3'));
     expect(bodyRows().filter((tr) => tr.getAttribute('tabindex') === '0')).toHaveLength(1);
+  });
+
+  it("enters the body on the remembered row with Tab, past the rows' controls (WCAG 2.4.3 / RGAA 12.8)", async () => {
+    await mountBetween();
+    await userEvent.click(cellOf('c'));
+    before().focus();
+
+    // The header checkbox and the two sort buttons, then the body.
+    await userEvent.keyboard('{Tab}{Tab}{Tab}{Tab}');
+
+    expect(document.activeElement).toBe(rowOf('SKU-3'));
+  });
+
+  it('returns to the remembered row with Shift+Tab from after the table', async () => {
+    await mountBetween();
+    await userEvent.click(cellOf('c'));
+    after().focus();
+
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(linkOf('SKU-3'));
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(row('SKU-3'));
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(rowOf('SKU-3'));
+  });
+
+  it('moves from a row into its own controls with Tab, then out of the table', async () => {
+    await mountBetween();
+    rowOf('SKU-2').focus();
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(row('SKU-2'));
+    await userEvent.tab();
+    expect(document.activeElement).toBe(linkOf('SKU-2'));
+    await userEvent.tab();
+    expect(document.activeElement).toBe(after());
   });
 
   it('removes the tabindex it wrote when navigable is turned off', async () => {

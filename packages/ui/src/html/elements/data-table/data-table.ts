@@ -107,12 +107,22 @@ interface DataTableEventMap {
 
 let scopes = 0;
 
+/** Sets `tabindex` (`null` removes it), writing only when it differs. */
+function setTabIndex(el: HTMLElement, value: string | null) {
+  if (el.getAttribute('tabindex') === value) return;
+  if (value === null) el.removeAttribute('tabindex');
+  else el.setAttribute('tabindex', value);
+}
+
 const ROW_INPUTS = ':scope > table > tbody > tr > [data-select] input';
 const HEADER_SELECT = ':scope > table > thead > tr > [data-select]';
 const HEADER_ROW = ':scope > table > thead > tr';
 const BODY_ROWS = ':scope > table > tbody > tr';
 /** What a click on a row should leave to the control it hit. */
 const INTERACTIVE = 'a, button, input, select, textarea, label, summary, [tabindex]:not(tr)';
+/** What in a row can take focus: taken out of the Tab sequence while its row isn't the stop. */
+const FOCUSABLE =
+  'a[href], button, input, select, textarea, summary, iframe, [contenteditable]:not([contenteditable="false"]), [tabindex]:not(tr)';
 
 /**
  * @summary Adds sorting and row selection to the `.l-table` it wraps, leaving rendering to the page.
@@ -139,7 +149,7 @@ const INTERACTIVE = 'a, button, input, select, textarea, label, summary, [tabind
  * With `persist-key`, the user's columns are kept in `localStorage`.
  *
  * With `navigable`, the body rows are reachable from the keyboard: the body is
- * one tab stop (the row last reached), ↑ and ↓ move between rows, Home and End
+ * one tab stop (the row last reached, then its own controls), ↑ and ↓ move between rows, Home and End
  * go to the first and last, Page Up and Page Down move ten rows, Space toggles
  * the row's input, Shift with ↑ or ↓ extends the selection, Enter follows the
  * row link and Escape clears the selection. Rows only: the table keeps table
@@ -220,6 +230,8 @@ export class DataTable extends LuxenElement {
   private _rowFocused = false;
   /** Rows this element gave a `tabindex`, removed again when navigation stops. */
   private readonly _tabRows = new Set<HTMLTableRowElement>();
+  /** Controls in the rows, with the `tabindex` they had before this element wrote one. */
+  private readonly _controlTabs = new Map<HTMLElement, string | null>();
 
   /** The sort the markup states, read from the headers' `aria-sort`. */
   get sorting(): SortingState {
@@ -584,7 +596,7 @@ export class DataTable extends LuxenElement {
     return tr && this._navRows().includes(tr) ? tr : null;
   }
 
-  /** One row holds `tabindex="0"`, the others `-1`; writes only what differs. */
+  /** Picks the row that is the tab stop, roves the rows to it, and restores focus. */
   private _syncNavigation() {
     if (!this.navigable) {
       this._releaseRows();
@@ -595,15 +607,32 @@ export class DataTable extends LuxenElement {
     let stop = this._focusKey === null ? -1 : keys.indexOf(this._focusKey);
     const restore = stop !== -1 && this._rowFocused && !this.contains(document.activeElement);
     if (stop === -1) stop = 0;
+    this._rove(rows, stop);
+    if (restore) rows[stop].focus();
+  }
+
+  /**
+   * One row holds `tabindex="0"`, the others `-1`. The controls of the other rows
+   * leave the Tab sequence too, so the body is one tab stop: the row, then its
+   * own controls. Writes only what differs.
+   */
+  private _rove(rows: HTMLTableRowElement[], stop: number) {
     rows.forEach((tr, i) => {
-      const value = i === stop ? '0' : '-1';
-      if (tr.getAttribute('tabindex') !== value) tr.setAttribute('tabindex', value);
+      setTabIndex(tr, i === stop ? '0' : '-1');
       this._tabRows.add(tr);
+      for (const control of tr.querySelectorAll<HTMLElement>(FOCUSABLE)) {
+        if (!this._controlTabs.has(control)) {
+          this._controlTabs.set(control, control.getAttribute('tabindex'));
+        }
+        setTabIndex(control, i === stop ? this._controlTabs.get(control)! : '-1');
+      }
     });
     for (const tr of this._tabRows) {
       if (!tr.isConnected || !rows.includes(tr)) this._tabRows.delete(tr);
     }
-    if (restore) rows[stop].focus();
+    for (const control of this._controlTabs.keys()) {
+      if (!control.isConnected) this._controlTabs.delete(control);
+    }
   }
 
   private _releaseRows() {
