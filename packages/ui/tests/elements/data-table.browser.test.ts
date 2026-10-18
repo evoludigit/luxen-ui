@@ -404,6 +404,15 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(focusedSku()).toBe('SKU-4');
   });
 
+  it('extends from the focused row, not from a row toggled before plain moves', async () => {
+    await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(cellOf('a'));
+
+    await userEvent.keyboard('{ }{ArrowDown}{ArrowDown}{Shift>}{ArrowDown}{/Shift}');
+
+    expect(checkedSkus()).toEqual(['a', 'c', 'd']);
+  });
+
   it('selects a range with Shift and Space from the last row toggled', async () => {
     await mount(TABLE({ attrs: 'selectable navigable' }));
     await userEvent.click(cellOf('a'));

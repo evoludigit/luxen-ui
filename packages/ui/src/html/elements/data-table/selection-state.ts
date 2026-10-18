@@ -90,20 +90,18 @@ export class SelectionState {
   }
 
   /**
-   * Shift with an arrow, moving the focus from `from` to `to`: selects `to` and
-   * the rows back to the anchor, starting from `from` (selected) when there is
-   * no anchor among the visible rows. Radios just select `to`.
+   * Shift with an arrow, moving the focus from `from` to `to`: selects `from`
+   * and `to`. The range starts at the focused row, not at a row the focus has
+   * left, so plain arrows followed by Shift and an arrow never select the rows
+   * in between. Radios just select `to`.
    */
   extend(visible: readonly string[], from: string, to: string): boolean {
     if (this.mode === 'single') {
       this._anchor = to;
       return this.select(to, true);
     }
-    let changed = false;
-    if (this._anchor === null || !visible.includes(this._anchor)) {
-      this._anchor = from;
-      changed = this._apply(from, true);
-    }
+    this._anchor = from;
+    const changed = this._apply(from, true);
     return this.range(visible, to) || this._userChange(changed);
   }
 
