@@ -226,8 +226,14 @@ export class DataTable extends LuxenElement {
   private _added: HTMLInputElement | null = null;
   /** With `navigable`: the key of the row that is the body's tab stop. */
   private _focusKey: string | null = null;
-  /** Whether a row itself had focus, so a re-render that replaces it can restore it. */
-  private _rowFocused = false;
+  /**
+   * Whether focus is in the rows (a row or a control in one), so a re-render
+   * that drops it to `<body>` puts it back on a row.
+   */
+  private _focusInRows = false;
+  /** The focused row's place, for a neighbour to take over when the row goes. */
+  private _focusIndex = -1;
+  private _focusOutTimer = 0;
   /** Rows this element gave a `tabindex`, removed again when navigation stops. */
   private readonly _tabRows = new Set<HTMLTableRowElement>();
   /** Controls in the rows, with the `tabindex` they had before this element wrote one. */
@@ -330,6 +336,7 @@ export class DataTable extends LuxenElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     clearTimeout(this._setupTimer);
+    clearTimeout(this._focusOutTimer);
     this._observer?.disconnect();
     this._observer = null;
     this.removeEventListener('click', this._onClick);
@@ -605,7 +612,9 @@ export class DataTable extends LuxenElement {
     const rows = this._navRows();
     const keys = rows.map((tr) => this._rowKey(tr, rows));
     let stop = this._focusKey === null ? -1 : keys.indexOf(this._focusKey);
-    const restore = stop !== -1 && this._rowFocused && !this.contains(document.activeElement);
+    const restore =
+      this._focusInRows &&
+      (document.activeElement === document.body || document.activeElement === null);
     if (stop === -1) stop = 0;
     this._rove(rows, stop);
     if (restore) rows[stop].focus();
@@ -652,8 +661,10 @@ export class DataTable extends LuxenElement {
     if (!this.navigable) return;
     const tr = this._navRowOf(e.target);
     if (!tr) return;
-    this._rowFocused = e.target === tr;
-    const key = this._rowKey(tr);
+    const rows = this._navRows();
+    this._focusInRows = true;
+    this._focusIndex = rows.indexOf(tr);
+    const key = this._rowKey(tr, rows);
     if (key !== this._focusKey) {
       this._focusKey = key;
       this._syncNavigation();
@@ -661,12 +672,17 @@ export class DataTable extends LuxenElement {
   };
 
   private _onFocusOut = (e: FocusEvent) => {
-    if (e.relatedTarget instanceof Node && this.contains(e.relatedTarget)) return;
-    const left = e.target as Element;
-    // A row the page just removed keeps the flag, so the re-render restores focus.
-    queueMicrotask(() => {
-      if (left.isConnected) this._rowFocused = false;
-    });
+    if (e.relatedTarget instanceof Element) {
+      if (!this._navRowOf(e.relatedTarget)) this._focusInRows = false;
+      return;
+    }
+    // No new target: Chromium moving or removing the focused node, a click on a
+    // blank part of the page, or the window losing focus. Decide after the
+    // mutation sync (a microtask) has had its chance to put focus back.
+    clearTimeout(this._focusOutTimer);
+    this._focusOutTimer = window.setTimeout(() => {
+      if (!this._navRowOf(document.activeElement)) this._focusInRows = false;
+    }, 0);
   };
 
   /** Keys pressed on a row itself; keys on a control inside it stay the control's. */
