@@ -928,3 +928,27 @@ describe('A radio table never gets a header checkbox', () => {
     expect(host.querySelectorAll('thead input')).toHaveLength(0);
   });
 });
+
+describe('A navigable table inside a shadow root', () => {
+  it('hands focus to the next row when the focused one is removed after a focusout with no target', async () => {
+    host = document.createElement('div');
+    document.body.append(host);
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = TABLE({ attrs: 'navigable' });
+    await customElements.whenDefined('l-data-table');
+    const el = root.querySelector<DataTable>('l-data-table')!;
+    await el.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+    const rowOf = (value: string) => root.querySelector(`input[value="${value}"]`)!.closest('tr')!;
+
+    rowOf('b').focus();
+    // As when the window loses focus: no new target, focus stays on the row.
+    rowOf('b').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    await new Promise((r) => setTimeout(r, 10));
+    rowOf('b').remove();
+    await el.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.activeElement).toBe(rowOf('c'));
+  });
+});

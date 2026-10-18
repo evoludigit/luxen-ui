@@ -717,8 +717,10 @@ export class DataTable extends LuxenElement {
     // blank part of the page, or the window losing focus. Decide after the
     // mutation sync (a microtask) has had its chance to put focus back.
     clearTimeout(this._focusOutTimer);
+    // The element's own root: in a shadow root, the document's activeElement is the host.
     this._focusOutTimer = window.setTimeout(() => {
-      if (!this._navRowOf(document.activeElement)) this._focusInRows = false;
+      const root = this.getRootNode() as Document | ShadowRoot;
+      if (!this._navRowOf(root.activeElement)) this._focusInRows = false;
     }, 0);
   };
 
