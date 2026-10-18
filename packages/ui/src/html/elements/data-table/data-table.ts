@@ -686,9 +686,9 @@ export class DataTable extends LuxenElement {
     if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
     this._selection.endRun();
     if (e.key === ' ') {
+      e.preventDefault();
       const input = tr.querySelector<HTMLInputElement>(':scope > [data-select] input');
       if (!input) return;
-      e.preventDefault();
       this._shiftSpace = e.shiftKey;
       input.click();
     } else if (e.key === 'Enter') {
@@ -696,7 +696,12 @@ export class DataTable extends LuxenElement {
       if (!link) return;
       e.preventDefault();
       link.click();
-    } else if (e.key === 'Escape' && this.selectable && this._selection.keys.length > 0) {
+    } else if (
+      e.key === 'Escape' &&
+      this.selectable &&
+      this._selection.mode === 'multiple' &&
+      this._selection.keys.length > 0
+    ) {
       e.preventDefault();
       if (this._selection.clear()) {
         this._sync();
