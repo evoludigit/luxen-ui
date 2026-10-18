@@ -148,12 +148,17 @@ const FOCUSABLE =
  * changes in `column-change` for the page to render; it never moves a cell.
  * With `persist-key`, the user's columns are kept in `localStorage`.
  *
- * With `navigable`, the body rows are reachable from the keyboard: the body is
- * one tab stop (the row last reached, then its own controls), ↑ and ↓ move between rows, Home and End
- * go to the first and last, Page Up and Page Down move ten rows, Space toggles
- * the row's input, Shift with ↑ or ↓ extends the selection, Enter follows the
- * row link and Escape clears the selection. Rows only: the table keeps table
- * semantics, and keys pressed on a control inside a row are left to it.
+ * With `navigable`, an opt-in for keyboard work through a list, the body is one
+ * tab stop (the row last reached, then its own controls; the other rows'
+ * controls leave the Tab sequence, so don't bind `tabindex` on them). ↑ and ↓
+ * move between rows, Home and End go to the first and last, Page Up and Page
+ * Down move ten rows. With `selectable`, Space toggles the row, Shift with a
+ * move key selects from where the Shift run started (moving back shrinks it),
+ * Ctrl or Cmd with A selects the page's rows, and Escape clears the selection
+ * (with checkboxes). Enter follows the row link, keeping Ctrl, Cmd or Shift.
+ * Rows keep their place by input value, else `id`; a removed focused row hands
+ * focus to its neighbour. Rows only: the table keeps table semantics, and keys
+ * pressed on a control inside a row are left to it.
  *
  * @example
  * ```html
@@ -195,8 +200,9 @@ export class DataTable extends LuxenElement {
   selectable = false;
 
   /**
-   * Makes the body rows reachable and selectable from the keyboard, one row at a
-   * time (roving focus on the `<tr>` elements). Off by default.
+   * Makes the body one tab stop and its rows reachable and selectable from the
+   * keyboard, one row at a time (roving focus on the `<tr>` elements, which keep
+   * table semantics). Off by default.
    */
   @property({ type: Boolean, reflect: true })
   navigable = false;
