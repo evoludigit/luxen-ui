@@ -627,9 +627,9 @@ export class DataTable extends LuxenElement {
   }
 
   /** A row's identity across re-renders: its input's value, else its `id`, else its place. */
-  private _rowKey(tr: HTMLTableRowElement, rows = this._navRows()): string {
+  private _rowKey(tr: HTMLTableRowElement, index = this._navRows().indexOf(tr)): string {
     const input = tr.querySelector<HTMLInputElement>(':scope > [data-select] input');
-    return input?.value || (tr.id ? `#${tr.id}` : `@${rows.indexOf(tr)}`);
+    return input?.value || (tr.id ? `#${tr.id}` : `@${index}`);
   }
 
   /** The navigable row an event happened in, if it is one of this table's. */
@@ -646,7 +646,7 @@ export class DataTable extends LuxenElement {
       return;
     }
     const rows = this._navRows();
-    const keys = rows.map((tr) => this._rowKey(tr, rows));
+    const keys = rows.map((tr, i) => this._rowKey(tr, i));
     this._warnIfKeyless(keys);
     const restore =
       this._focusInRows &&
@@ -681,8 +681,9 @@ export class DataTable extends LuxenElement {
         setTabIndex(control, i === stop ? this._controlTabs.get(control)! : '-1');
       }
     });
+    const current = new Set(rows);
     for (const tr of this._tabRows) {
-      if (!tr.isConnected || !rows.includes(tr)) this._tabRows.delete(tr);
+      if (!current.has(tr)) this._tabRows.delete(tr);
     }
     for (const control of this._controlTabs.keys()) {
       if (!control.isConnected) this._controlTabs.delete(control);
@@ -719,7 +720,7 @@ export class DataTable extends LuxenElement {
     const rows = this._navRows();
     this._focusInRows = true;
     this._focusIndex = rows.indexOf(tr);
-    const key = this._rowKey(tr, rows);
+    const key = this._rowKey(tr, this._focusIndex);
     if (key !== this._focusKey) {
       this._focusKey = key;
       this._syncNavigation();
