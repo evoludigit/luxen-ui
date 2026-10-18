@@ -200,7 +200,7 @@ describe('The selection is reported as TanStack Table’s RowSelectionState', ()
   });
 });
 
-describe('Shift with an arrow extends the selection from the focused row', () => {
+describe('A Shift run selects from its start row to the focused row', () => {
   it('selects the row it starts from and the row it reaches', () => {
     const s = new SelectionState('multiple');
     expect(s.extend(VISIBLE, 'a', 'b')).toBe(true);
@@ -241,5 +241,49 @@ describe('Shift with an arrow extends the selection from the focused row', () =>
     const s = new SelectionState('single');
     s.extend(VISIBLE, 'a', 'b');
     expect(s.keys).toEqual(['b']);
+  });
+
+  it('shrinks back toward the start row', () => {
+    const s = new SelectionState('multiple');
+    s.extend(VISIBLE, 'a', 'b');
+    s.extend(VISIBLE, 'b', 'c');
+    s.extend(VISIBLE, 'c', 'd');
+    expect(s.extend(VISIBLE, 'd', 'c')).toBe(true);
+    expect(new Set(s.keys)).toEqual(new Set(['a', 'b', 'c']));
+  });
+
+  it('keeps rows selected before the run when it shrinks over them', () => {
+    const s = new SelectionState('multiple');
+    s.toggle('c');
+    s.endRun();
+    s.extend(VISIBLE, 'a', 'b');
+    s.extend(VISIBLE, 'b', 'c');
+    s.extend(VISIBLE, 'c', 'b');
+    expect(new Set(s.keys)).toEqual(new Set(['a', 'b', 'c']));
+  });
+
+  it('flips to the other side when the focus crosses the start row', () => {
+    const s = new SelectionState('multiple');
+    s.extend(VISIBLE, 'c', 'd');
+    s.extend(VISIBLE, 'd', 'c');
+    s.extend(VISIBLE, 'c', 'b');
+    expect(new Set(s.keys)).toEqual(new Set(['b', 'c']));
+  });
+
+  it('starts a new run after endRun', () => {
+    const s = new SelectionState('multiple');
+    s.extend(VISIBLE, 'a', 'b');
+    s.extend(VISIBLE, 'b', 'c');
+    s.endRun();
+    s.extend(VISIBLE, 'd', 'e');
+    expect(new Set(s.keys)).toEqual(new Set(['a', 'b', 'c', 'd', 'e']));
+    s.extend(VISIBLE, 'e', 'd');
+    expect(new Set(s.keys)).toEqual(new Set(['a', 'b', 'c', 'd']));
+  });
+
+  it('jumps several rows in one step', () => {
+    const s = new SelectionState('multiple');
+    s.extend(VISIBLE, 'b', 'e');
+    expect(new Set(s.keys)).toEqual(new Set(['b', 'c', 'd', 'e']));
   });
 });
