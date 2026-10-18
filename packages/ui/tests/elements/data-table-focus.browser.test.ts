@@ -60,12 +60,13 @@ const rowAt = (i: number) => host.querySelectorAll<HTMLTableRowElement>('tbody >
 const displayed = (tr: HTMLTableRowElement) =>
   [...tr.cells].filter((c) => getComputedStyle(c).display !== 'none');
 
-/** Reach the second row from the keyboard alone: Tab into the body, then ↓. */
+/** Reach the second row from the keyboard: Tab into the body, then ↓. */
 async function focusSecondRow() {
-  await userEvent.click(page.getByRole('button', { name: 'Before' }));
-  // Past the header checkbox, when there is one, onto the body's tab stop.
-  await userEvent.keyboard(host.querySelector('thead input') ? '{Tab}{Tab}' : '{Tab}');
-  await userEvent.keyboard('{ArrowDown}');
+  // Start on the last control before the body: the header checkbox, if any.
+  const start = host.querySelector<HTMLElement>('thead input');
+  if (start) start.focus();
+  else await userEvent.click(page.getByRole('button', { name: 'Before' }));
+  await userEvent.keyboard('{Tab}{ArrowDown}');
   const tr = rowAt(1);
   expect(document.activeElement).toBe(tr);
   expect(tr.matches(':focus-visible')).toBe(true);
@@ -141,6 +142,65 @@ describe('With navigable, a keyboard-focused row is ringed in every layout', () 
 
     expect(displayed(tr)).toHaveLength(2);
     expect(ringedCells(tr)).toEqual(displayed(tr));
+  });
+});
+
+describe('The ring holds on sticky cells, in both appearances and right to left', () => {
+  const STICKY_ROW = (id: string, sku: string) => `
+    <tr>
+      <td data-select data-sticky="start"><input type="checkbox" class="l-checkbox" value="${id}" aria-label="Select ${sku}"></td>
+      <th scope="row" data-sticky="start">${sku}</th>
+      <td>Item ${id}</td>
+      <td data-type="number">12</td>
+      <td data-sticky="end"><button type="button">Actions for ${sku}</button></td>
+    </tr>`;
+  /** A 900 px table in a 500 px scroller, scrolled sideways under its sticky cells. */
+  const mountSticky = async ({ appearance = '', dir = 'ltr' } = {}) => {
+    const el = await mount(`
+      <button type="button" id="before">Before</button>
+      <div dir="${dir}" class="scroller" style="inline-size: 500px; overflow: auto">
+        <l-data-table selectable navigable>
+          <table class="l-table" ${appearance && `data-appearance="${appearance}"`} style="inline-size: 900px">
+            <caption>Products</caption>
+            <thead>
+              <tr>
+                <th scope="col" data-select data-sticky="start"></th>
+                <th scope="col" data-key="sku" data-sticky="start">SKU</th>
+                <th scope="col" data-key="name">Name</th>
+                <th scope="col" data-key="stock" data-type="number">Stock</th>
+                <th scope="col" data-sticky="end" aria-label="Actions"></th>
+              </tr>
+            </thead>
+            <tbody>${['a', 'b', 'c'].map((id, i) => STICKY_ROW(id, `SKU-${i + 1}`)).join('')}</tbody>
+          </table>
+        </l-data-table>
+      </div>`);
+    const scroller = host.querySelector<HTMLElement>('.scroller')!;
+    scroller.scrollLeft = dir === 'rtl' ? -300 : 300;
+    return el;
+  };
+  const sticky = (tr: HTMLTableRowElement) => [...tr.querySelectorAll('[data-sticky]')];
+
+  for (const appearance of ['lines', 'grid']) {
+    it(`rings sticky start and end cells too (${appearance})`, async () => {
+      await mountSticky({ appearance });
+
+      const tr = await focusSecondRow();
+
+      expect(sticky(tr)).toHaveLength(3);
+      expect(ringedCells(tr)).toEqual(displayed(tr));
+    });
+  }
+
+  it('rings the row the same way in a right-to-left table', async () => {
+    await mountSticky({ dir: 'rtl' });
+
+    const tr = await focusSecondRow();
+
+    expect(ringedCells(tr)).toEqual(displayed(tr));
+    // The start mark (third layer) sits at the inline start: the right.
+    const positions = layers(getComputedStyle(tr.cells[0]).backgroundPosition);
+    expect(positions[2]).toMatch(/^100% /);
   });
 });
 
