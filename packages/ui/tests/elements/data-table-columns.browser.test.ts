@@ -165,11 +165,19 @@ describe('The page sets columns, the user changes them', () => {
     const next = waitForEvent(el, 'column-change') as Promise<ColumnChangeEvent>;
 
     const [sku, name, warehouse, stock] = el.columns;
-    el.dispatchEvent(new ColumnsRequestEvent([name, { ...sku, visible: false }, warehouse, stock]));
+    el.dispatchEvent(
+      new ColumnsRequestEvent([
+        name,
+        { ...sku, visible: false },
+        warehouse,
+        { ...stock, visible: false },
+      ]),
+    );
     const event = await next;
 
     expect(event.columnOrder[0]).toBe(sku.key);
     expect(event.columnVisibility.sku).toBe(true);
+    expect(event.columnVisibility.stock).toBe(false);
   });
 
   it('follows the page when it renders the columns in the reported order', async () => {

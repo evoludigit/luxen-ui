@@ -1,6 +1,6 @@
 // oxlint-disable-next-line typescript/triple-slash-reference -- ambient *.css module for the side-effect CSS import below.
 /// <reference path="./a11y/a11y-env.d.ts" />
-import { afterEach, describe, expect, it } from 'vite-plus/test';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { page } from 'vite-plus/test/browser/context';
 import '../../src/css/preset.css';
 import '../../src/css/elements/column-manager.css';
@@ -202,12 +202,10 @@ describe('Dragging a column', () => {
 describe('An empty list', () => {
   it('takes a column dropped on its hint', async () => {
     const table = await mount();
-    for (const key of items('Hidden columns')) {
-      await userEvent.click(
-        list('Hidden columns').querySelector(`li[data-key="${key}"] [data-control="eye"]`),
-      );
-      await settle();
-    }
+    await userEvent.click(
+      list('Hidden columns').querySelector('li[data-key="supplier"] [data-control="eye"]'),
+    );
+    await settle();
     const hint = host.querySelector('.l-column-manager-hint')!;
     expect(hint).toBeTruthy();
     const name = list('Shown columns').querySelector('li[data-key="name"]')!;
@@ -219,7 +217,41 @@ describe('An empty list', () => {
   });
 });
 
+describe('A column removed while it is dragged', () => {
+  it('is dropped without an error and without a change', async () => {
+    const table = await mount();
+    const name = list('Shown columns').querySelector('li[data-key="name"]')!;
+    name.dispatchEvent(
+      new DragEvent('dragstart', { bubbles: true, dataTransfer: new DataTransfer() }),
+    );
+    table.querySelector('th[data-key="name"]')!.remove();
+    await settle();
+    const listener = vi.fn();
+    table.addEventListener('column-change', listener);
+    const errors = vi.fn();
+    window.addEventListener('error', errors);
+
+    list('Hidden columns').dispatchEvent(
+      new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }),
+    );
+    await settle();
+    window.removeEventListener('error', errors);
+
+    expect(errors).not.toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
 describe('Resetting the columns', () => {
+  it('reports nothing when the columns already are the defaults', async () => {
+    const table = await mount();
+    const listener = vi.fn();
+    table.addEventListener('column-change', listener);
+    await userEvent.click(button('Reset columns'));
+    await settle();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('restores the header’s defaults and forgets the stored ones', async () => {
     const table = await mount(MARKUP().replace('id="products"', 'id="products" persist-key="p"'));
     await userEvent.click(button('Hide column Name'));

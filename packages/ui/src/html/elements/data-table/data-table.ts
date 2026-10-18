@@ -534,9 +534,12 @@ export class DataTable extends LuxenElement {
 
   private _onColumnsRequest = (e: Event) => {
     const { columns } = e as ColumnsRequestEvent;
+    const before = this._columns;
     this._applyColumns(columns);
     this._write(columns === null ? null : this._columns);
-    this.dispatchEvent(new ColumnChangeEvent(this._columns));
+    if (JSON.stringify(this._columns) !== JSON.stringify(before)) {
+      this.dispatchEvent(new ColumnChangeEvent(this._columns));
+    }
   };
 
   private _read() {
