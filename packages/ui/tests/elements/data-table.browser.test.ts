@@ -699,6 +699,17 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     });
   });
 
+  it('returns focus to the row when a re-render replaces the row whose checkbox had focus', async () => {
+    await mount(TABLE({ attrs: 'selectable navigable' }));
+    row('SKU-2').focus();
+
+    host.querySelector('tbody')!.innerHTML =
+      ROW('a', 'SKU-1') + ROW('b', 'SKU-2') + ROW('c', 'SKU-3') + ROW('d', 'SKU-4');
+    await settle();
+
+    expect(document.activeElement).toBe(rowOf('SKU-2'));
+  });
+
   it('moves focus to the next row when the focused row is removed', async () => {
     await mount(TABLE({ attrs: 'navigable' }));
     await userEvent.click(cellOf('a'));
