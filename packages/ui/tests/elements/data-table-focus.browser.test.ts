@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { cdp, page, server } from 'vite-plus/test/browser';
 import '../../src/html/elements/data-table/index.js';
 import type { DataTable } from '../../src/html/elements/data-table/data-table.js';
+import { contrast, over, parse } from './support/contrast.js';
 import { userEvent } from './support/user-event.js';
 
 // The ring `<l-data-table navigable>` draws around a keyboard-focused row. The
@@ -201,6 +202,31 @@ describe('The ring holds on sticky cells, in both appearances and right to left'
     // The start mark (third layer) sits at the inline start: the right.
     const positions = layers(getComputedStyle(tr.cells[0]).backgroundPosition);
     expect(positions[2]).toMatch(/^100% /);
+  });
+});
+
+describe('The ring stands out from the row it rings', () => {
+  /** A token's colour as a `color-scheme` pane resolves it. */
+  const token = (scheme: string, name: string) => {
+    const probe = document.createElement('div');
+    probe.style.colorScheme = scheme;
+    probe.style.color = `var(${name})`;
+    host.append(probe);
+    const color = parse(getComputedStyle(probe).color);
+    probe.remove();
+    return color;
+  };
+
+  it('keeps the ring at 3:1 against the row, selected or not, in both schemes (WCAG 1.4.11 / RGAA 3.3)', async () => {
+    await mount(TABLE());
+    for (const scheme of ['light', 'dark']) {
+      const surface = token(scheme, '--l-color-surface');
+      for (const tint of ['--l-color-bg-state-hover', '--l-color-bg-state-selected']) {
+        const row = over(token(scheme, tint), surface);
+        const ring = over(token(scheme, '--l-focus-ring'), row);
+        expect(contrast(ring, row), `${scheme}, ${tint}`).toBeGreaterThanOrEqual(3);
+      }
+    }
   });
 });
 
