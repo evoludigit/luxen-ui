@@ -480,6 +480,60 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(checkedSkus()).toEqual([]);
   });
 
+  /** Whether the page saw `key` prevented, once the element has handled it. */
+  const preventedOnPage = (key: string) => {
+    const seen: boolean[] = [];
+    const listener = (e: KeyboardEvent) => {
+      if (e.key === key) seen.push(e.defaultPrevented);
+    };
+    document.addEventListener('keydown', listener);
+    return () => {
+      document.removeEventListener('keydown', listener);
+      return seen;
+    };
+  };
+
+  it('leaves a radio selection alone on Escape, and lets Escape through', async () => {
+    const rows = ['a', 'b', 'c', 'd'].map((id, i) => ROW(id, `SKU-${i + 1}`, 'radio')).join('');
+    await mount(TABLE({ attrs: 'selectable navigable', rows }));
+    await userEvent.click(cellOf('a'));
+    await userEvent.keyboard('{ }');
+    const prevented = preventedOnPage('Escape');
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(checkedSkus()).toEqual(['a']);
+    expect(prevented()).toEqual([false]);
+  });
+
+  it('keeps the page still on Space on a row without a selection input', async () => {
+    const plain = (id: string, sku: string) =>
+      `<tr><th scope="row">${sku}</th><td>Item ${id}</td></tr>`;
+    await mount(
+      TABLE({ attrs: 'navigable', head: '', rows: plain('a', 'SKU-1') + plain('b', 'SKU-2') }),
+    );
+    await userEvent.click(cellOf('a'));
+    const prevented = preventedOnPage(' ');
+
+    await userEvent.keyboard('{ }');
+
+    expect(prevented()).toEqual([true]);
+  });
+
+  it('clears rows on other pages too with Escape, reporting it', async () => {
+    const el = await mount(TABLE({ attrs: 'selectable navigable' }));
+    el.rowSelection = { a: true, elsewhere: true };
+    await settle();
+    await userEvent.click(cellOf('a'));
+    const events: DataTableSelectionChangeEvent[] = [];
+    el.addEventListener('selection-change', (e) => events.push(e));
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(el.rowSelection).toEqual({});
+    expect(events).toHaveLength(1);
+  });
+
   it('opens the focused row with Enter by following its row link', async () => {
     const rows = LINKED('a', 'SKU-1') + LINKED('b', 'SKU-2');
     await mount(TABLE({ attrs: 'navigable', rows }));
