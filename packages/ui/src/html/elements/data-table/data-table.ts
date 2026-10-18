@@ -678,10 +678,13 @@ export class DataTable extends LuxenElement {
     if (target !== null) {
       e.preventDefault();
       const next = rows[target];
-      if (e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) this._extendTo(tr, next);
+      if (e.shiftKey) this._extendRun(tr, next);
+      else this._selection.endRun();
       this._focusRow(next);
       return;
     }
+    if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+    this._selection.endRun();
     if (e.key === ' ') {
       const input = tr.querySelector<HTMLInputElement>(':scope > [data-select] input');
       if (!input) return;
@@ -702,7 +705,7 @@ export class DataTable extends LuxenElement {
     }
   }
 
-  private _extendTo(from: HTMLTableRowElement, to: HTMLTableRowElement) {
+  private _extendRun(from: HTMLTableRowElement, to: HTMLTableRowElement) {
     if (!this.selectable || from === to) return;
     const input = (tr: HTMLTableRowElement) =>
       tr.querySelector<HTMLInputElement>(':scope > [data-select] input');
@@ -731,7 +734,10 @@ export class DataTable extends LuxenElement {
   private _onClick = (e: MouseEvent) => {
     if (this.navigable) {
       const tr = this._navRowOf(e.target);
-      if (tr && !(e.target as Element).closest(INTERACTIVE)) this._focusRow(tr);
+      if (tr && !(e.target as Element).closest(INTERACTIVE)) {
+        this._selection.endRun();
+        this._focusRow(tr);
+      }
     }
     if (this._isRowInput(e.target)) {
       this._range = e.shiftKey || this._shiftSpace;

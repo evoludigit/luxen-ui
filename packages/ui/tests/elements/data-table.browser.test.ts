@@ -423,6 +423,42 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(checkedSkus()).toEqual(['a', 'c', 'd']);
   });
 
+  it('shrinks the selection with Shift and the opposite arrow', async () => {
+    const rows = ['a', 'b', 'c', 'd', 'e', 'f'].map((id, i) => ROW(id, `SKU-${i + 1}`)).join('');
+    await mount(TABLE({ attrs: 'selectable navigable', rows }));
+    await userEvent.click(cellOf('b'));
+
+    await userEvent.keyboard('{Shift>}{ArrowDown}{ArrowDown}{ArrowDown}{ArrowUp}{ArrowUp}{/Shift}');
+
+    expect(checkedSkus()).toEqual(['b', 'c']);
+    expect(focusedSku()).toBe('SKU-3');
+  });
+
+  it('extends with Shift and End, Home, Page Down or Page Up', async () => {
+    await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(cellOf('b'));
+
+    await userEvent.keyboard('{Shift>}{End}{/Shift}');
+    expect(checkedSkus()).toEqual(['b', 'c', 'd']);
+    await userEvent.keyboard('{Shift>}{Home}{/Shift}');
+    expect(checkedSkus()).toEqual(['a', 'b']);
+    await userEvent.keyboard('{Shift>}{PageDown}{/Shift}');
+    expect(checkedSkus()).toEqual(['b', 'c', 'd']);
+    await userEvent.keyboard('{Shift>}{PageUp}{/Shift}');
+    expect(checkedSkus()).toEqual(['a', 'b']);
+  });
+
+  it('starts a new run after a plain move', async () => {
+    await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(cellOf('a'));
+
+    await userEvent.keyboard(
+      '{Shift>}{ArrowDown}{/Shift}{ArrowDown}{ArrowDown}{Shift>}{ArrowUp}{/Shift}',
+    );
+
+    expect(checkedSkus()).toEqual(['a', 'b', 'c', 'd']);
+  });
+
   it('selects a range with Shift and Space from the last row toggled', async () => {
     await mount(TABLE({ attrs: 'selectable navigable' }));
     await userEvent.click(cellOf('a'));
