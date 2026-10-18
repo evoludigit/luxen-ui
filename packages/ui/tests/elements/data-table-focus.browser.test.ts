@@ -230,6 +230,64 @@ describe('The ring stands out from the row it rings', () => {
   });
 });
 
+describe('The focused row stays in view', () => {
+  /** Presses each key in turn, checking the page after every one. */
+  const pressEach = async (keys: string[], check: (key: string) => void): Promise<void> => {
+    const [key, ...rest] = keys;
+    if (key === undefined) return;
+    await userEvent.keyboard(key);
+    check(key);
+    return pressEach(rest, check);
+  };
+  const mountScrolled = (rows: number, style: string) =>
+    mount(`
+      <div class="scroller" style="${style}; overflow: auto">
+        <l-data-table navigable>
+          <table class="l-table" style="inline-size: 900px">
+            <caption>Products</caption>
+            <thead>
+              <tr>
+                <th scope="col" data-key="sku">SKU</th>
+                <th scope="col" data-key="name">Name</th>
+                <th scope="col" data-key="stock" data-type="number">Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Array.from({ length: rows }, (_, i) => ROW(`r${i + 1}`, `SKU-${i + 1}`, { select: false })).join('')}
+            </tbody>
+          </table>
+        </l-data-table>
+      </div>`);
+  const scroller = () => host.querySelector<HTMLElement>('.scroller')!;
+
+  it('keeps the focused row clear of the sticky header when moving up (WCAG 2.4.11)', async () => {
+    await mountScrolled(60, 'block-size: 300px');
+    await userEvent.click(page.getByRole('cell', { name: 'Item r1', exact: true }));
+    const header = host.querySelector('thead')!;
+
+    const keys = ['{End}', ...Array.from({ length: 25 }, () => '{ArrowUp}'), '{PageUp}', '{Home}'];
+    await pressEach(keys, (key) => {
+      const row = (document.activeElement as HTMLElement).getBoundingClientRect();
+      const box = scroller().getBoundingClientRect();
+      if (key === '{End}') expect(scroller().scrollTop).toBeGreaterThan(0);
+      expect(row.top, key).toBeGreaterThanOrEqual(header.getBoundingClientRect().bottom - 1);
+      expect(row.bottom, key).toBeLessThanOrEqual(box.bottom + 1);
+    });
+  });
+
+  it('keeps the horizontal scroll position when moving between rows', async () => {
+    await mountScrolled(4, 'inline-size: 500px');
+    await userEvent.click(page.getByRole('cell', { name: 'Item r1', exact: true }));
+    scroller().scrollLeft = 200;
+    const before = scroller().scrollLeft;
+    expect(before).toBeGreaterThan(0);
+
+    await userEvent.keyboard('{ArrowDown}');
+
+    expect(Math.abs(scroller().scrollLeft - before)).toBeLessThanOrEqual(1);
+  });
+});
+
 describe('In forced colors, the focused row is outlined instead', () => {
   const emulate = (value: 'active' | 'none') =>
     cdp().send('Emulation.setEmulatedMedia', { features: [{ name: 'forced-colors', value }] });
