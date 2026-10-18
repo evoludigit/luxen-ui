@@ -89,6 +89,24 @@ export class SelectionState {
     return this._userChange(changed);
   }
 
+  /**
+   * Shift with an arrow, moving the focus from `from` to `to`: selects `to` and
+   * the rows back to the anchor, starting from `from` (selected) when there is
+   * no anchor among the visible rows. Radios just select `to`.
+   */
+  extend(visible: readonly string[], from: string, to: string): boolean {
+    if (this.mode === 'single') {
+      this._anchor = to;
+      return this.select(to, true);
+    }
+    let changed = false;
+    if (this._anchor === null || !visible.includes(this._anchor)) {
+      this._anchor = from;
+      changed = this._apply(from, true);
+    }
+    return this.range(visible, to) || this._userChange(changed);
+  }
+
   /** The header checkbox: selects or clears the visible rows, others untouched. */
   setVisible(visible: readonly string[], selected: boolean): boolean {
     let changed = false;

@@ -315,6 +315,166 @@ describe('With selectable, rows are selected through their own checkboxes', () =
   });
 });
 
+describe('With navigable, rows are reached and selected from the keyboard', () => {
+  const LINKED = (id: string, sku: string) => `
+    <tr>
+      <td data-select><input type="checkbox" name="product" value="${id}" aria-label="Select ${sku}"></td>
+      <th scope="row"><a href="#product-${id}" data-row-link>${sku}</a></th>
+      <td>Item ${id}</td>
+    </tr>`;
+  const bodyRows = () => [...host.querySelectorAll<HTMLTableRowElement>('tbody > tr')];
+  const rowOf = (sku: string) => bodyRows().find((tr) => tr.textContent.includes(sku))!;
+  const cellOf = (id: string) =>
+    page.getByRole('cell', { name: `Item ${id}`, exact: true }).element();
+  const focusedSku = () =>
+    (document.activeElement as HTMLElement).closest('tr')?.querySelector('th')?.textContent?.trim();
+
+  it('makes one row the tab stop of the body: the first one, until another is reached', async () => {
+    await mount(TABLE({ attrs: 'navigable' }));
+
+    expect(bodyRows().map((tr) => tr.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1']);
+  });
+
+  it('writes no tabindex without navigable', async () => {
+    await mount(TABLE());
+
+    expect(bodyRows().some((tr) => tr.hasAttribute('tabindex'))).toBe(false);
+  });
+
+  it('focuses a row when a plain cell is clicked, and makes it the tab stop', async () => {
+    await mount(TABLE({ attrs: 'navigable' }));
+
+    await userEvent.click(cellOf('c'));
+
+    expect(document.activeElement).toBe(rowOf('SKU-3'));
+    expect(rowOf('SKU-3').getAttribute('tabindex')).toBe('0');
+    expect(rowOf('SKU-1').getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('moves between rows with the arrows, Home and End, and stops at the ends', async () => {
+    await mount(TABLE({ attrs: 'navigable' }));
+    await userEvent.click(cellOf('a'));
+
+    await userEvent.keyboard('{ArrowDown}');
+    expect(focusedSku()).toBe('SKU-2');
+    await userEvent.keyboard('{End}');
+    expect(focusedSku()).toBe('SKU-4');
+    await userEvent.keyboard('{ArrowDown}');
+    expect(focusedSku()).toBe('SKU-4');
+    await userEvent.keyboard('{Home}');
+    expect(focusedSku()).toBe('SKU-1');
+    await userEvent.keyboard('{ArrowUp}');
+    expect(focusedSku()).toBe('SKU-1');
+  });
+
+  it('moves ten rows with Page Down and Page Up', async () => {
+    const rows = Array.from({ length: 12 }, (_, i) => ROW(`r${i + 1}`, `SKU-${i + 1}`)).join('');
+    await mount(TABLE({ attrs: 'navigable', rows }));
+    await userEvent.click(cellOf('r1'));
+
+    await userEvent.keyboard('{PageDown}');
+    expect(focusedSku()).toBe('SKU-11');
+    await userEvent.keyboard('{PageDown}');
+    expect(focusedSku()).toBe('SKU-12');
+    await userEvent.keyboard('{PageUp}');
+    expect(focusedSku()).toBe('SKU-2');
+  });
+
+  it('toggles the focused row with Space, reporting it once', async () => {
+    const el = await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(cellOf('b'));
+    const events: DataTableSelectionChangeEvent[] = [];
+    el.addEventListener('selection-change', (e) => events.push(e));
+
+    await userEvent.keyboard('{ }');
+
+    expect(checkedSkus()).toEqual(['b']);
+    expect(events).toHaveLength(1);
+    expect(events[0].rowSelection).toEqual({ b: true });
+    expect(document.activeElement).toBe(rowOf('SKU-2'));
+  });
+
+  it('extends the selection with Shift and the arrows', async () => {
+    await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(cellOf('a'));
+
+    await userEvent.keyboard('{Shift>}{ArrowDown}{ArrowDown}{ArrowDown}{/Shift}');
+
+    expect(checkedSkus()).toEqual(['a', 'b', 'c', 'd']);
+    expect(focusedSku()).toBe('SKU-4');
+  });
+
+  it('selects a range with Shift and Space from the last row toggled', async () => {
+    await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(cellOf('a'));
+
+    await userEvent.keyboard('{ }{ArrowDown}{ArrowDown}{Shift>}{ }{/Shift}');
+
+    expect(checkedSkus()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('clears the selection with Escape, reporting it', async () => {
+    const el = await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(cellOf('a'));
+    await userEvent.keyboard('{ }{ArrowDown}{ }');
+    const cleared = waitForEvent(el, 'selection-change') as Promise<DataTableSelectionChangeEvent>;
+
+    await userEvent.keyboard('{Escape}');
+
+    expect((await cleared).rowSelection).toEqual({});
+    expect(checkedSkus()).toEqual([]);
+  });
+
+  it('opens the focused row with Enter by following its row link', async () => {
+    const rows = LINKED('a', 'SKU-1') + LINKED('b', 'SKU-2');
+    await mount(TABLE({ attrs: 'navigable', rows }));
+    const followed: string[] = [];
+    host.addEventListener('click', (e) => {
+      const link = (e.target as Element).closest('a');
+      if (link) {
+        e.preventDefault();
+        followed.push(link.getAttribute('href')!);
+      }
+    });
+    rowOf('SKU-2').focus();
+
+    await userEvent.keyboard('{Enter}');
+
+    expect(followed).toEqual(['#product-b']);
+  });
+
+  it('leaves keys alone while focus is on a control inside a row', async () => {
+    await mount(TABLE({ attrs: 'selectable navigable' }));
+    await userEvent.click(row('SKU-1'));
+
+    await userEvent.keyboard('{ArrowDown}');
+
+    expect(document.activeElement).toBe(row('SKU-1'));
+  });
+
+  it('keeps the focused row, by its key, when the page re-renders and re-sorts the rows', async () => {
+    await mount(TABLE({ attrs: 'navigable' }));
+    await userEvent.click(cellOf('c'));
+
+    host.querySelector('tbody')!.innerHTML =
+      ROW('d', 'SKU-4') + ROW('c', 'SKU-3') + ROW('b', 'SKU-2') + ROW('a', 'SKU-1');
+    await settle();
+
+    expect(rowOf('SKU-3').getAttribute('tabindex')).toBe('0');
+    expect(document.activeElement).toBe(rowOf('SKU-3'));
+    expect(bodyRows().filter((tr) => tr.getAttribute('tabindex') === '0')).toHaveLength(1);
+  });
+
+  it('removes the tabindex it wrote when navigable is turned off', async () => {
+    const el = await mount(TABLE({ attrs: 'navigable' }));
+
+    el.navigable = false;
+    await settle();
+
+    expect(bodyRows().some((tr) => tr.hasAttribute('tabindex'))).toBe(false);
+  });
+});
+
 describe('Accessibility', () => {
   describe('Roles and accessible names', () => {
     it('names the added header checkbox in the page language (WCAG 4.1.2 / RGAA 7.1)', async () => {

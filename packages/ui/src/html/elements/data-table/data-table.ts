@@ -2,6 +2,7 @@ import { property } from 'lit/decorators.js';
 import { LuxenElement } from '../../shared/luxen-element.js';
 import { LocalizeController } from '../../shared/localize.js';
 import { cls, getPrefix } from '../../registry.js';
+import { rowTarget } from './row-navigation.js';
 import { nextSorting, sortingFromHeaders, type SortingState } from './sort-state.js';
 import {
   SelectionState,
@@ -109,6 +110,9 @@ let scopes = 0;
 const ROW_INPUTS = ':scope > table > tbody > tr > [data-select] input';
 const HEADER_SELECT = ':scope > table > thead > tr > [data-select]';
 const HEADER_ROW = ':scope > table > thead > tr';
+const BODY_ROWS = ':scope > table > tbody > tr';
+/** What a click on a row should leave to the control it hit. */
+const INTERACTIVE = 'a, button, input, select, textarea, label, summary, [tabindex]:not(tr)';
 
 /**
  * @summary Adds sorting and row selection to the `.l-table` it wraps, leaving rendering to the page.
@@ -133,6 +137,13 @@ const HEADER_ROW = ':scope > table > thead > tr';
  * The element hides columns with a stylesheet of its own and reports order
  * changes in `column-change` for the page to render; it never moves a cell.
  * With `persist-key`, the user's columns are kept in `localStorage`.
+ *
+ * With `navigable`, the body rows are reachable from the keyboard: the body is
+ * one tab stop (the row last reached), ↑ and ↓ move between rows, Home and End
+ * go to the first and last, Page Up and Page Down move ten rows, Space toggles
+ * the row's input, Shift with ↑ or ↓ extends the selection, Enter follows the
+ * row link and Escape clears the selection. Rows only: the table keeps table
+ * semantics, and keys pressed on a control inside a row are left to it.
  *
  * @example
  * ```html
@@ -173,6 +184,13 @@ export class DataTable extends LuxenElement {
   @property({ type: Boolean, reflect: true })
   selectable = false;
 
+  /**
+   * Makes the body rows reachable and selectable from the keyboard, one row at a
+   * time (roving focus on the `<tr>` elements). Off by default.
+   */
+  @property({ type: Boolean, reflect: true })
+  navigable = false;
+
   /** Keeps the user's column order and visibility in `localStorage` under this name. */
   @property({ attribute: 'persist-key', reflect: true })
   persistKey?: string;
@@ -196,6 +214,12 @@ export class DataTable extends LuxenElement {
   private _warned = new WeakSet<HTMLInputElement>();
   /** The header checkbox this element added, renamed when the language changes. */
   private _added: HTMLInputElement | null = null;
+  /** With `navigable`: the key of the row that is the body's tab stop. */
+  private _focusKey: string | null = null;
+  /** Whether a row itself had focus, so a re-render that replaces it can restore it. */
+  private _rowFocused = false;
+  /** Rows this element gave a `tabindex`, removed again when navigation stops. */
+  private readonly _tabRows = new Set<HTMLTableRowElement>();
 
   /** The sort the markup states, read from the headers' `aria-sort`. */
   get sorting(): SortingState {
@@ -279,6 +303,8 @@ export class DataTable extends LuxenElement {
     this.addEventListener('change', this._onChange);
     this.addEventListener('keydown', this._onKeyDown);
     this.addEventListener('columns-request', this._onColumnsRequest);
+    this.addEventListener('focusin', this._onFocusIn);
+    this.addEventListener('focusout', this._onFocusOut);
     this.dataset.columnScope = this._scope;
     // Children may not be parsed yet when the element upgrades mid-parse: try
     // synchronously, then retry once on a macrotask (rAF is suspended in hidden
@@ -298,12 +324,15 @@ export class DataTable extends LuxenElement {
     this.removeEventListener('change', this._onChange);
     this.removeEventListener('keydown', this._onKeyDown);
     this.removeEventListener('columns-request', this._onColumnsRequest);
+    this.removeEventListener('focusin', this._onFocusIn);
+    this.removeEventListener('focusout', this._onFocusOut);
     this._releaseSheet();
+    this._releaseRows();
   }
 
   // LocalizeController requests an update when the language changes.
   override updated(changed: Map<string, unknown>) {
-    if (changed.has('selectable')) this._queueSync();
+    if (changed.has('selectable') || changed.has('navigable')) this._queueSync();
     const label = this._localize.term('selectAllRows');
     if (this._added && this._added.getAttribute('aria-label') !== label) {
       this._added.setAttribute('aria-label', label);
@@ -336,6 +365,7 @@ export class DataTable extends LuxenElement {
   private _sync() {
     this._syncColumns();
     if (this.selectable) this._syncSelection();
+    this._syncNavigation();
   }
 
   /** Brings the inputs in line with the selection; writes only what differs. */
@@ -532,9 +562,146 @@ export class DataTable extends LuxenElement {
     );
   }
 
+  // --- Row navigation ---
+
+  /** The rows navigation moves through: body rows, less those made of one spanning cell. */
+  private _navRows(): HTMLTableRowElement[] {
+    return [...this.querySelectorAll<HTMLTableRowElement>(BODY_ROWS)].filter(
+      (tr) => !tr.querySelector(':scope > [colspan]'),
+    );
+  }
+
+  /** A row's identity across re-renders: its input's value, else its `id`, else its place. */
+  private _rowKey(tr: HTMLTableRowElement, rows = this._navRows()): string {
+    const input = tr.querySelector<HTMLInputElement>(':scope > [data-select] input');
+    return input?.value || (tr.id ? `#${tr.id}` : `@${rows.indexOf(tr)}`);
+  }
+
+  /** The navigable row an event happened in, if it is one of this table's. */
+  private _navRowOf(target: EventTarget | null): HTMLTableRowElement | null {
+    if (!(target instanceof Element)) return null;
+    const tr = target.closest('tr');
+    return tr && this._navRows().includes(tr) ? tr : null;
+  }
+
+  /** One row holds `tabindex="0"`, the others `-1`; writes only what differs. */
+  private _syncNavigation() {
+    if (!this.navigable) {
+      this._releaseRows();
+      return;
+    }
+    const rows = this._navRows();
+    const keys = rows.map((tr) => this._rowKey(tr, rows));
+    let stop = this._focusKey === null ? -1 : keys.indexOf(this._focusKey);
+    const restore = stop !== -1 && this._rowFocused && !this.contains(document.activeElement);
+    if (stop === -1) stop = 0;
+    rows.forEach((tr, i) => {
+      const value = i === stop ? '0' : '-1';
+      if (tr.getAttribute('tabindex') !== value) tr.setAttribute('tabindex', value);
+      this._tabRows.add(tr);
+    });
+    for (const tr of this._tabRows) {
+      if (!tr.isConnected || !rows.includes(tr)) this._tabRows.delete(tr);
+    }
+    if (restore) rows[stop].focus();
+  }
+
+  private _releaseRows() {
+    for (const tr of this._tabRows) tr.removeAttribute('tabindex');
+    this._tabRows.clear();
+  }
+
+  private _focusRow(tr: HTMLTableRowElement) {
+    this._focusKey = this._rowKey(tr);
+    this._syncNavigation();
+    tr.focus();
+  }
+
+  private _onFocusIn = (e: FocusEvent) => {
+    if (!this.navigable) return;
+    const tr = this._navRowOf(e.target);
+    if (!tr) return;
+    this._rowFocused = e.target === tr;
+    const key = this._rowKey(tr);
+    if (key !== this._focusKey) {
+      this._focusKey = key;
+      this._syncNavigation();
+    }
+  };
+
+  private _onFocusOut = (e: FocusEvent) => {
+    if (e.relatedTarget instanceof Node && this.contains(e.relatedTarget)) return;
+    const left = e.target as Element;
+    // A row the page just removed keeps the flag, so the re-render restores focus.
+    queueMicrotask(() => {
+      if (left.isConnected) this._rowFocused = false;
+    });
+  };
+
+  /** Keys pressed on a row itself; keys on a control inside it stay the control's. */
+  private _onRowKey(e: KeyboardEvent, tr: HTMLTableRowElement) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const rows = this._navRows();
+    const current = rows.indexOf(tr);
+    const target = rowTarget(e.key, current, rows.length);
+    if (target !== null) {
+      e.preventDefault();
+      const next = rows[target];
+      if (e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) this._extendTo(tr, next);
+      this._focusRow(next);
+      return;
+    }
+    if (e.key === ' ') {
+      const input = tr.querySelector<HTMLInputElement>(':scope > [data-select] input');
+      if (!input) return;
+      e.preventDefault();
+      this._shiftSpace = e.shiftKey;
+      input.click();
+    } else if (e.key === 'Enter') {
+      const link = tr.querySelector<HTMLAnchorElement>('a[data-row-link]');
+      if (!link) return;
+      e.preventDefault();
+      link.click();
+    } else if (e.key === 'Escape' && this.selectable && this._selection.keys.length > 0) {
+      e.preventDefault();
+      if (this._selection.clear()) {
+        this._sync();
+        this._reportSelection();
+      }
+    }
+  }
+
+  private _extendTo(from: HTMLTableRowElement, to: HTMLTableRowElement) {
+    if (!this.selectable || from === to) return;
+    const input = (tr: HTMLTableRowElement) =>
+      tr.querySelector<HTMLInputElement>(':scope > [data-select] input');
+    const a = input(from);
+    const b = input(to);
+    if (!a || !b) return;
+    if (this._selection.extend(this._visibleKeys(), a.value, b.value)) {
+      this._sync();
+      this._reportSelection();
+    }
+  }
+
+  private _reportSelection() {
+    const visible = this._visibleKeys();
+    this.dispatchEvent(
+      new DataTableSelectionChangeEvent(
+        toRowSelection(this._selection.keys),
+        this._selection.allMatching,
+        visible.length > 0 && this._selection.headerState(visible) === 'all',
+      ),
+    );
+  }
+
   // --- User actions ---
 
   private _onClick = (e: MouseEvent) => {
+    if (this.navigable) {
+      const tr = this._navRowOf(e.target);
+      if (tr && !(e.target as Element).closest(INTERACTIVE)) this._focusRow(tr);
+    }
     if (this._isRowInput(e.target)) {
       this._range = e.shiftKey || this._shiftSpace;
       this._shiftSpace = false;
@@ -555,7 +722,11 @@ export class DataTable extends LuxenElement {
   private _onKeyDown = (e: KeyboardEvent) => {
     if (e.key === ' ' && this._isRowInput(e.target)) {
       this._shiftSpace = e.shiftKey;
+      return;
     }
+    if (!this.navigable || e.defaultPrevented) return;
+    const tr = this._navRowOf(e.target);
+    if (tr && e.target === tr) this._onRowKey(e, tr);
   };
 
   private _onChange = (e: Event) => {
@@ -575,16 +746,7 @@ export class DataTable extends LuxenElement {
       return;
     }
     this._sync();
-    if (changed) {
-      const visible = this._visibleKeys();
-      this.dispatchEvent(
-        new DataTableSelectionChangeEvent(
-          toRowSelection(this._selection.keys),
-          this._selection.allMatching,
-          visible.length > 0 && this._selection.headerState(visible) === 'all',
-        ),
-      );
-    }
+    if (changed) this._reportSelection();
   };
 }
 

@@ -14,6 +14,7 @@ import footer from '../.vitepress/examples/table/Footer.html?raw'
 import empty from '../.vitepress/examples/table/Empty.html?raw'
 import selectableRows from '../.vitepress/examples/table/SelectableRows.html?raw'
 import formSubmit from '../.vitepress/examples/table/FormSubmit.html?raw'
+import navigableRows from '../.vitepress/examples/table/NavigableRows.html?raw'
 </script>
 
 # Table <Badge type="tip">&lt;table&gt;</Badge>
@@ -175,6 +176,17 @@ The element fires `selection-change` with `rowSelection`, the inputs' `value`s m
 <<< @/.vitepress/examples/table/SelectableRows.html [HTML]
 :::
 
+### Keyboard navigation with `l-data-table`
+
+Add `navigable` to `<l-data-table>` for lists people work through from the keyboard. The body becomes one tab stop, the row last reached; ↑ and ↓ move between rows, Home and End go to the first and last, Page Up and Page Down move ten rows. With `selectable`, Space toggles the focused row, Shift with ↑ or ↓ extends the selection and Escape clears it; Enter follows the row link. Focus moves between rows, never cells, so the table stays a table, and keys pressed on a control inside a row are left to that control. A click on a plain cell makes its row the one the keyboard continues from, and a row the page re-renders keeps its place by its input's `value`.
+
+<ComponentWrapper :html="navigableRows" />
+
+::: details Code
+::: code-group
+<<< @/.vitepress/examples/table/NavigableRows.html [HTML]
+:::
+
 ### Columns the user picks
 
 Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` (`columnOrder`, `columnVisibility`) for the page to render. Add `persist-key` to keep the user's columns between visits. The table hides a column by its position, so give the first column `data-fixed`: it carries the jump-to mark, and in the grid appearance the first and last cells carry the rounded corners. Rows with a spanning cell, such as an empty state, are left as they are.
@@ -328,7 +340,7 @@ table.addEventListener('selection-change', (e) => update(e.rowSelection));
   { Check: 'Sort glyph', Description: 'The direction glyph of an unsorted column uses the tertiary text color, above 3:1 against the surface in both schemes', WCAG: '[WCAG 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast), [RGAA 3.3](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#3.3)' },
   { Check: 'Header checkbox', Description: 'The checkbox `l-data-table` adds is named in the page language and reports a mixed state while some rows are selected; it exists only once the script runs, so there is never a control that does nothing', WCAG: '[WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1)' },
   { Check: 'Column manager', Description: 'Lists are named; every eye and move button is named after its column; moves have buttons besides drag and drop; changes are announced in a polite live region', WCAG: '[WCAG 2.5.7](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements), [WCAG 4.1.3](https://www.w3.org/WAI/WCAG22/Understanding/status-messages), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1), [RGAA 7.5](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.5)' },
-  { Check: 'Focus ring', Description: 'Header buttons and the row link show the Luxen focus ring', WCAG: '[WCAG 2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible), [RGAA 10.7](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#10.7)' },
+  { Check: 'Focus ring', Description: 'Header buttons, the row link and, with `navigable`, the focused row show the Luxen focus ring', WCAG: '[WCAG 2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible), [RGAA 10.7](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#10.7)' },
 ]" :rules="[
   'Name the table with a `&lt;caption&gt;` or `aria-label`',
   'Use `&lt;th scope=&quot;col&quot;&gt;` for column headers and `&lt;th scope=&quot;row&quot;&gt;` for the cell that identifies each row',
@@ -345,6 +357,13 @@ table.addEventListener('selection-change', (e) => update(e.rowSelection));
   { Key: 'Space', Description: 'Activates the focused header button or toggles the focused checkbox' },
   { Key: 'Shift + Space', Description: 'With `l-data-table selectable`: gives every row from the last toggled one to the focused one the same state' },
   { Key: 'Shift + click', Description: 'Same, with the pointer' },
+  { Key: '↑ / ↓', Description: 'With `l-data-table navigable`, on a row: moves to the previous or next row' },
+  { Key: 'Home / End', Description: 'With `navigable`: moves to the first or last row' },
+  { Key: 'Page Up / Page Down', Description: 'With `navigable`: moves ten rows up or down' },
+  { Key: 'Space (on a row)', Description: 'With `navigable`: toggles the row’s checkbox' },
+  { Key: 'Shift + ↑ / ↓', Description: 'With `navigable selectable`: moves and extends the selection' },
+  { Key: 'Enter (on a row)', Description: 'With `navigable`: follows the row link' },
+  { Key: 'Escape (on a row)', Description: 'With `navigable selectable`: clears the selection' },
   { Key: 'Alt + ↑ / ↓', Description: 'In `l-column-manager`: moves the focused column up or down among the shown ones' },
 ]" />
 
@@ -367,7 +386,7 @@ import 'luxen-ui/column-manager';
 
 :::
 
-The CSS covers the table itself; the JS import upgrades `l-data-table` with sorting and selection. Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l-button` (`luxen-ui/css/button`).
+The CSS covers the table itself; the JS import upgrades `l-data-table` with sorting, selection and keyboard navigation. Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l-button` (`luxen-ui/css/button`).
 
 ### Attributes
 
