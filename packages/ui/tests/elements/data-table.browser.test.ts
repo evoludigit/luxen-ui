@@ -655,6 +655,50 @@ describe('With navigable, rows are reached and selected from the keyboard', () =
     expect(bodyRows().filter((tr) => tr.getAttribute('tabindex') === '0')).toHaveLength(1);
   });
 
+  describe('Focus is never taken back once the user has moved on', () => {
+    const FOUR = ROW('a', 'SKU-1') + ROW('b', 'SKU-2') + ROW('c', 'SKU-3') + ROW('d', 'SKU-4');
+    const mountWithAfter = () =>
+      mount(`${TABLE({ attrs: 'navigable' })}<input id="after" aria-label="After">`);
+    const render = async (rows: string) => {
+      host.querySelector('tbody')!.innerHTML = rows;
+      await settle();
+    };
+
+    it('does not take focus back after the user has moved on', async () => {
+      await mountWithAfter();
+      await userEvent.click(cellOf('a'));
+      await userEvent.keyboard('{ArrowDown}');
+      await render('<tr><td colspan="4">No products</td></tr>');
+
+      await userEvent.click(after());
+      await userEvent.keyboard('abc');
+      await render(FOUR);
+
+      expect(document.activeElement).toBe(after());
+    });
+
+    it('does not take focus when rows re-render while focus was never in them', async () => {
+      await mountWithAfter();
+      after().focus();
+
+      await render(FOUR);
+
+      expect(document.activeElement).toBe(after());
+    });
+
+    it('does not take focus back after a click on a blank part of the page', async () => {
+      await mountWithAfter();
+      await userEvent.click(cellOf('a'));
+      await userEvent.keyboard('{ArrowDown}');
+
+      await userEvent.click(host.querySelector('caption')!);
+      await new Promise((r) => setTimeout(r, 0));
+      await render(FOUR);
+
+      expect(document.activeElement).toBe(document.body);
+    });
+  });
+
   it('moves focus to the next row when the focused row is removed', async () => {
     await mount(TABLE({ attrs: 'navigable' }));
     await userEvent.click(cellOf('a'));
