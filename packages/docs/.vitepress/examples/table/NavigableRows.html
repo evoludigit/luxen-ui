@@ -1,0 +1,112 @@
+<p>
+  Tab into the rows, then use ↑ and ↓. Hold Shift with an arrow to select a run of rows, and press
+  Enter to open one.
+</p>
+<l-data-table
+  selectable
+  navigable
+>
+  <table class="l-table">
+    <caption>
+      Products
+    </caption>
+    <thead>
+      <tr>
+        <th
+          scope="col"
+          data-select
+        ></th>
+        <th scope="col">SKU</th>
+        <th scope="col">Name</th>
+        <th
+          scope="col"
+          data-type="number"
+        >
+          In stock
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-select>
+          <input
+            type="checkbox"
+            class="l-checkbox"
+            name="product"
+            value="sku-1042"
+            aria-label="Select SKU-1042"
+          />
+        </td>
+        <th scope="row">
+          <a
+            href="#sku-1042"
+            data-row-link
+            >SKU-1042</a
+          >
+        </th>
+        <td>Desk lamp</td>
+        <td data-type="number">4,210</td>
+      </tr>
+      <tr>
+        <td data-select>
+          <input
+            type="checkbox"
+            class="l-checkbox"
+            name="product"
+            value="sku-2087"
+            aria-label="Select SKU-2087"
+          />
+        </td>
+        <th scope="row">
+          <a
+            href="#sku-2087"
+            data-row-link
+            >SKU-2087</a
+          >
+        </th>
+        <td>Office chair</td>
+        <td data-type="number">12,004</td>
+      </tr>
+      <tr>
+        <td data-select>
+          <input
+            type="checkbox"
+            class="l-checkbox"
+            name="product"
+            value="sku-3110"
+            aria-label="Select SKU-3110"
+          />
+        </td>
+        <th scope="row">
+          <a
+            href="#sku-3110"
+            data-row-link
+            >SKU-3110</a
+          >
+        </th>
+        <td>Standing desk</td>
+        <td data-type="number">865</td>
+      </tr>
+      <tr>
+        <td data-select>
+          <input
+            type="checkbox"
+            class="l-checkbox"
+            name="product"
+            value="sku-4021"
+            aria-label="Select SKU-4021"
+          />
+        </td>
+        <th scope="row">
+          <a
+            href="#sku-4021"
+            data-row-link
+            >SKU-4021</a
+          >
+        </th>
+        <td>Monitor arm</td>
+        <td data-type="number">2,390</td>
+      </tr>
+    </tbody>
+  </table>
+</l-data-table>

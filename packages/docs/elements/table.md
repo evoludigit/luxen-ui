@@ -14,6 +14,7 @@ import footer from '../.vitepress/examples/table/Footer.html?raw'
 import empty from '../.vitepress/examples/table/Empty.html?raw'
 import selectableRows from '../.vitepress/examples/table/SelectableRows.html?raw'
 import formSubmit from '../.vitepress/examples/table/FormSubmit.html?raw'
+import navigableRows from '../.vitepress/examples/table/NavigableRows.html?raw'
 </script>
 
 # Table <Badge type="tip">&lt;table&gt;</Badge>
@@ -175,6 +176,25 @@ The element fires `selection-change` with `rowSelection`, the inputs' `value`s m
 <<< @/.vitepress/examples/table/SelectableRows.html [HTML]
 :::
 
+### Keyboard navigation with `l-data-table`
+
+Add `navigable` to `<l-data-table>` for lists people work through from the keyboard. It is off by default; without it the table behaves as it always does.
+
+- **Tab.** The body is one tab stop: the row last reached, then that row's own controls. The other rows' controls leave the Tab sequence and come back when their row is reached, so don't bind `tabindex` on controls inside a navigable table's rows.
+- **Moving.** ↑ and ↓ move between rows, Home and End go to the first and last, Page Up and Page Down move ten rows. A click on a plain cell makes its row the one the keyboard continues from.
+- **Selecting**, with `selectable`. Space toggles the focused row, and Shift with Space gives every row from the last one toggled the same state. Shift with a move key selects from the row where the Shift run started to the focused row: moving back shrinks the run, and rows selected before it stay selected. Ctrl or Cmd with A selects every row on the page. Escape clears the whole selection, rows on other pages included; with radios it does nothing.
+- **Opening.** Enter follows the row link. Ctrl or Cmd with Enter, and Shift with Enter, reach it as a click with the same modifier would, so a router or the browser can open the record in a new tab or window.
+- **Re-rendering.** A row keeps its place by its input's `value`, else by its `id`: give rows without a selection input an `id` (the element warns otherwise). If the focused row is removed, focus moves to its neighbour.
+
+Focus moves between rows, never cells: the rows keep the `row` role and the table keeps its caption and headers, and keys pressed on a control inside a row are left to that control. Screen readers keep their own table commands; in NVDA's and JAWS's browse mode the arrow keys stay the screen reader's.
+
+<ComponentWrapper :html="navigableRows" />
+
+::: details Code
+::: code-group
+<<< @/.vitepress/examples/table/NavigableRows.html [HTML]
+:::
+
 ### Columns the user picks
 
 Key every column with `data-key`; mark the ones that must stay with `data-fixed` and the ones hidden by default with `data-hidden`. Point an `<l-column-manager>` at the table's `id`: it lists the shown, hidden and fixed columns, with an eye button to show or hide, move buttons, Alt with ↑ or ↓, and drag and drop. The table hides columns itself; a new order arrives in `column-change` (`columnOrder`, `columnVisibility`) for the page to render. Add `persist-key` to keep the user's columns between visits. The table hides a column by its position, so give the first column `data-fixed`: it carries the jump-to mark, and in the grid appearance the first and last cells carry the rounded corners. Rows with a spanning cell, such as an empty state, are left as they are.
@@ -328,13 +348,15 @@ table.addEventListener('selection-change', (e) => update(e.rowSelection));
   { Check: 'Sort glyph', Description: 'The direction glyph of an unsorted column uses the tertiary text color, above 3:1 against the surface in both schemes', WCAG: '[WCAG 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast), [RGAA 3.3](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#3.3)' },
   { Check: 'Header checkbox', Description: 'The checkbox `l-data-table` adds is named in the page language and reports a mixed state while some rows are selected; it exists only once the script runs, so there is never a control that does nothing', WCAG: '[WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1)' },
   { Check: 'Column manager', Description: 'Lists are named; every eye and move button is named after its column; moves have buttons besides drag and drop; changes are announced in a polite live region', WCAG: '[WCAG 2.5.7](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements), [WCAG 4.1.3](https://www.w3.org/WAI/WCAG22/Understanding/status-messages), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1), [RGAA 7.5](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.5)' },
-  { Check: 'Focus ring', Description: 'Header buttons and the row link show the Luxen focus ring', WCAG: '[WCAG 2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible), [RGAA 10.7](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#10.7)' },
+  { Check: 'Focus ring', Description: 'Header buttons, the row link and, with `navigable`, every visible cell of the focused row show the Luxen focus ring, also in forced colors, at 3:1 or more against the row; the focused row stays clear of the sticky header (2.4.11 is WCAG 2.2 only)', WCAG: '[WCAG 2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible), [WCAG 2.4.11](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum), [WCAG 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast), [RGAA 10.7](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#10.7), [RGAA 3.3](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#3.3)' },
+  { Check: 'Row navigation', Description: 'Opt-in with `navigable`; rows keep the `row` role and the table its semantics; the body is one tab stop; focus returns to a neighbour when the focused row is removed', WCAG: '[WCAG 2.1.1](https://www.w3.org/WAI/WCAG22/Understanding/keyboard), [WCAG 2.4.3](https://www.w3.org/WAI/WCAG22/Understanding/focus-order), [WCAG 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value), [RGAA 7.3](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.3), [RGAA 12.8](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#12.8), [RGAA 7.1](https://accessibilite.numerique.gouv.fr/methode/criteres-et-tests/#7.1)' },
 ]" :rules="[
   'Name the table with a `&lt;caption&gt;` or `aria-label`',
   'Use `&lt;th scope=&quot;col&quot;&gt;` for column headers and `&lt;th scope=&quot;row&quot;&gt;` for the cell that identifies each row',
   'Put the sort control in a `&lt;button&gt;` (or a link, when the server sorts) inside the header, and `aria-sort` on the sorted `&lt;th&gt;` only',
   'Name every row checkbox, e.g. `aria-label=&quot;Select SKU-1042&quot;`',
   'Keep `data-row-link` out of a `data-sticky` cell',
+  'With `navigable`, don’t bind `tabindex` on controls inside the rows, and give rows without a selection input an `id`',
 ]" />
 
 ### Keyboard interactions
@@ -345,6 +367,17 @@ table.addEventListener('selection-change', (e) => update(e.rowSelection));
   { Key: 'Space', Description: 'Activates the focused header button or toggles the focused checkbox' },
   { Key: 'Shift + Space', Description: 'With `l-data-table selectable`: gives every row from the last toggled one to the focused one the same state' },
   { Key: 'Shift + click', Description: 'Same, with the pointer' },
+  { Key: 'Tab (into the body)', Description: 'With `l-data-table navigable`: enters on the row last reached, then that row’s controls, then leaves the table; Shift + Tab goes the other way' },
+  { Key: '↑ / ↓', Description: 'With `navigable`, on a row: moves to the previous or next row' },
+  { Key: 'Home / End', Description: 'With `navigable`: moves to the first or last row' },
+  { Key: 'Page Up / Page Down', Description: 'With `navigable`: moves ten rows up or down' },
+  { Key: 'Space (on a row)', Description: 'With `navigable`: toggles the row’s checkbox, or selects its radio' },
+  { Key: 'Shift + Space (on a row)', Description: 'With `navigable selectable`: gives every row from the last one toggled to the focused one the same state' },
+  { Key: 'Shift + ↑ / ↓ / Home / End / Page Up / Page Down', Description: 'With `navigable selectable`: moves and selects from the row where the Shift run started to the focused row; moving back shrinks the run, and rows selected before it stay selected' },
+  { Key: 'Ctrl / Cmd + A (on a row)', Description: 'With `navigable selectable` and checkboxes: selects every row on the page' },
+  { Key: 'Enter (on a row)', Description: 'With `navigable`: follows the row link' },
+  { Key: 'Ctrl / Cmd / Shift + Enter (on a row)', Description: 'With `navigable`: follows the row link as a click with the same modifier would' },
+  { Key: 'Escape (on a row)', Description: 'With `navigable selectable`: clears the whole selection (checkboxes), rows on other pages included' },
   { Key: 'Alt + ↑ / ↓', Description: 'In `l-column-manager`: moves the focused column up or down among the shown ones' },
 ]" />
 
@@ -367,7 +400,7 @@ import 'luxen-ui/column-manager';
 
 :::
 
-The CSS covers the table itself; the JS import upgrades `l-data-table` with sorting and selection. Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l-button` (`luxen-ui/css/button`).
+The CSS covers the table itself; the JS import upgrades `l-data-table` with sorting, selection and keyboard navigation. Selectable rows use `.l-checkbox` (`luxen-ui/css/checkbox`); row actions use `.l-button` (`luxen-ui/css/button`).
 
 ### Attributes
 

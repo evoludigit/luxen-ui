@@ -26,6 +26,8 @@ export type HeaderState = 'none' | 'some' | 'all';
 export class SelectionState {
   private readonly _keys = new Set<string>();
   private _anchor: string | null = null;
+  /** A Shift run: the row it started from, and the selection from before it. */
+  private _run: { start: string; base: Set<string> } | null = null;
   private _allMatching = false;
 
   constructor(readonly mode: SelectionMode) {}
@@ -56,6 +58,7 @@ export class SelectionState {
     this._keys.clear();
     for (const key of this.mode === 'single' ? keys.slice(0, 1) : keys) this._keys.add(key);
     this._anchor = null;
+    this._run = null;
   }
 
   select(key: string, selected: boolean): boolean {
@@ -69,6 +72,7 @@ export class SelectionState {
   /** A click on a row's input. Moves the anchor for the next range. */
   toggle(key: string): boolean {
     this._anchor = key;
+    this._run = null;
     return this.select(key, this.mode === 'single' || !this._keys.has(key));
   }
 
@@ -80,6 +84,7 @@ export class SelectionState {
     const from = this._anchor === null ? -1 : visible.indexOf(this._anchor);
     const end = visible.indexOf(to);
     if (this.mode === 'single' || from === -1 || end === -1) return this.toggle(to);
+    this._run = null;
     const selected = this._keys.has(this._anchor!);
     let changed = false;
     for (const key of visible.slice(Math.min(from, end), Math.max(from, end) + 1)) {
@@ -89,8 +94,39 @@ export class SelectionState {
     return this._userChange(changed);
   }
 
+  /**
+   * Shift with a move key, the focus going from `from` to `to`. The first Shift
+   * move starts a run at `from`; the selection is then the selection from before
+   * the run plus every visible row from the run's start to `to`. Moving back
+   * shrinks the run, crossing its start flips it, and rows selected before the
+   * run stay selected. The run starts at the focused row, so plain moves followed
+   * by a Shift move never select the rows in between. Radios just select `to`.
+   */
+  extend(visible: readonly string[], from: string, to: string): boolean {
+    this._anchor = to;
+    if (this.mode === 'single') return this.select(to, true);
+    if (!this._run || !visible.includes(this._run.start)) {
+      this._run = { start: from, base: new Set(this._keys) };
+    }
+    const start = visible.indexOf(this._run.start);
+    const end = visible.indexOf(to);
+    if (end === -1) return false;
+    const next = new Set(this._run.base);
+    for (const key of visible.slice(Math.min(start, end), Math.max(start, end) + 1)) next.add(key);
+    const changed = next.size !== this._keys.size || [...next].some((key) => !this._keys.has(key));
+    this._keys.clear();
+    for (const key of next) this._keys.add(key);
+    return this._userChange(changed);
+  }
+
+  /** Ends a Shift run: the next Shift move starts a new one from the focused row. */
+  endRun(): void {
+    this._run = null;
+  }
+
   /** The header checkbox: selects or clears the visible rows, others untouched. */
   setVisible(visible: readonly string[], selected: boolean): boolean {
+    this._run = null;
     let changed = false;
     for (const key of visible) changed = this._apply(key, selected) || changed;
     return this._userChange(changed);
@@ -100,6 +136,7 @@ export class SelectionState {
     const changed = this._keys.size > 0;
     this._keys.clear();
     this._anchor = null;
+    this._run = null;
     return this._userChange(changed);
   }
 

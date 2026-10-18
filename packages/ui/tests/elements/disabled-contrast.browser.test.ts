@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import '../../src/html/elements/slider/index.js';
 import type { Slider } from '../../src/html/elements/slider/slider.js';
+import { contrast, over, parse as parseColor, type Rgba } from './support/contrast.js';
 
 // The browser config has no setup file, so the light-DOM stylesheets are not
 // loaded by default — every other suite asserts DOM/ARIA and does not need them.
@@ -60,69 +61,13 @@ afterEach(() => host?.remove());
 // --- colour plumbing -------------------------------------------------------
 // `getComputedStyle` returns a control's own declared colour, which since the
 // disabled tokens became translucent is not what lands on screen. Everything
-// below composites down to the surface before measuring.
+// below composites down to the surface before measuring (`support/contrast.ts`).
 
-const canvas = document.createElement('canvas');
-canvas.width = canvas.height = 1;
-const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-
-type Rgba = [number, number, number, number];
-
-/**
- * Parse any CSS colour (oklch, oklab, color-mix, light-dark…) into sRGB + alpha.
- *
- * A canvas silently keeps its previous `fillStyle` when handed a string it
- * cannot parse — including the empty string a custom property computes to once
- * one of its `var()`s is missing. Seeding twice with different colours turns
- * that silence into a throw: anything the canvas accepted resolves to the same
- * value from either seed, anything it rejected keeps the two seeds apart.
- *
- * Without this the suite measures a token that failed to resolve as opaque
- * black and reports the result as a contrast number, which is how a missing
- * `--l-form-control-disabled-mark-color` once read as "1.43:1, below the 3:1
- * floor" instead of "there is no thumb colour here at all".
- */
-function parse(color: string): Rgba {
-  const seededWith = (seed: string) => {
-    ctx.fillStyle = seed;
-    ctx.fillStyle = color;
-    return ctx.fillStyle;
-  };
-  if (seededWith('#000') !== seededWith('#fff')) {
-    throw new Error(`Not a colour: ${JSON.stringify(color)}. ${STALE_TOKENS_HINT}`);
-  }
-  ctx.clearRect(0, 0, 1, 1);
-  ctx.fillRect(0, 0, 1, 1);
-  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-  return [r, g, b, a / 255];
-}
-
-/** Composite a (possibly translucent) colour over an opaque backdrop. */
-function over(fg: Rgba, bg: Rgba): Rgba {
-  return [
-    fg[0] * fg[3] + bg[0] * (1 - fg[3]),
-    fg[1] * fg[3] + bg[1] * (1 - fg[3]),
-    fg[2] * fg[3] + bg[2] * (1 - fg[3]),
-    1,
-  ];
-}
+const parse = (color: string): Rgba => parseColor(color, STALE_TOKENS_HINT);
 
 /** Apply a group `opacity` the way the compositor would, against the backdrop. */
 function fade(color: Rgba, opacity: number, bg: Rgba): Rgba {
   return over([color[0], color[1], color[2], opacity], bg);
-}
-
-function luminance([r, g, b]: Rgba): number {
-  const lin = [r, g, b].map((v) => {
-    const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-}
-
-function contrast(a: Rgba, b: Rgba): number {
-  const [x, y] = [luminance(a), luminance(b)];
-  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 }
 
 // --- mounting --------------------------------------------------------------
