@@ -1,0 +1,52 @@
+<style>
+  /* The board's own hooks: spacing and the narrowest list. */
+  .board-styled {
+    --gap: 0.75rem;
+    --list-width: 12rem;
+  }
+
+  /* A list's fill, border and drop ring. */
+  .board-styled l-board-list {
+    --background-color: var(--l-color-bg-fill-neutral-subtle);
+    --border-color: transparent;
+    --drop-target-color: var(--l-color-bg-fill-success-strong);
+  }
+
+  .board-styled l-board-list::part(label) {
+    font-size: var(--l-text-xs);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--l-color-text-secondary);
+  }
+
+  /* A list that takes nothing: dashed and unfilled, instead of the grey fill. */
+  .board-styled l-board-list[disabled]::part(base) {
+    border: 1px dashed var(--l-color-border);
+    background-color: transparent;
+  }
+
+  /* The chips, through the item's own hooks. */
+  .board-styled l-board-item {
+    --background-color: var(--l-color-surface);
+    --border-color: var(--l-color-border);
+  }
+</style>
+
+<l-board
+  class="board-styled"
+  label="Price tiers"
+>
+  <l-board-list label="Unpriced">
+    <l-board-item value="sku-1042">Desk lamp</l-board-item>
+    <l-board-item value="sku-2210">Office chair</l-board-item>
+  </l-board-list>
+  <l-board-list label="Standard">
+    <l-board-item value="sku-3305">Notebook</l-board-item>
+  </l-board-list>
+  <l-board-list
+    label="Discontinued"
+    disabled
+  >
+    <l-board-item value="sku-0917">Desk fan</l-board-item>
+  </l-board-list>
+</l-board>

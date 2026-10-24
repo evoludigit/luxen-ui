@@ -26,6 +26,11 @@ const fr: LuxenTranslation = {
   selectOption: 'Veuillez sélectionner une option.',
   suggestions: 'Suggestions',
 
+  moveItemTo: (item) => `Déplacer ${item} vers…`,
+  // A noun phrase: "déplacé" would agree with an item of unknown gender.
+  itemMoved: (item, list) => `Déplacement de ${item} vers ${list}`,
+  dropHere: 'Déposer ici',
+
   richTextEditor: 'Éditeur de texte enrichi',
   formatting: 'Mise en forme',
   heading1: 'Titre 1',

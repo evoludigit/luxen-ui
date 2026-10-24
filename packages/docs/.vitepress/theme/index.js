@@ -26,6 +26,9 @@ export default {
       void import('luxen-ui/carousel-item');
       void import('luxen-ui/skeleton');
       void import('luxen-ui/slider');
+      void import('luxen-ui/board');
+      void import('luxen-ui/board-list');
+      void import('luxen-ui/board-item');
       void import('luxen-ui/spinner');
       void import('luxen-ui/sticky-bar');
       void import('luxen-ui/stories');

@@ -1,5 +1,7 @@
 import { afterAll, describe, expect, it } from 'vite-plus/test';
+import { page } from 'vite-plus/test/browser/context';
 import { getPrefix, setPrefix } from '../../src/html/registry.js';
+import { userEvent } from './support/user-event.js';
 
 // `setPrefix` mutates module-level state shared by every element, and
 // `staticTag` memoizes against it — so leaving it flipped would make any suite
@@ -36,6 +38,9 @@ describe('A consumer who rebrands the prefix', () => {
     await import('../../src/html/elements/form-field/index.js');
     await import('../../src/html/elements/stories-viewer/index.js');
     await import('../../src/html/elements/tag/index.js');
+    await import('../../src/html/elements/board/index.js');
+    await import('../../src/html/elements/board-list/index.js');
+    await import('../../src/html/elements/board-item/index.js');
 
     const host = document.createElement('div');
     host.innerHTML = `
@@ -50,7 +55,12 @@ describe('A consumer who rebrands the prefix', () => {
         <p class="x-hint">Hint text</p>
         <p class="x-error">Error text</p>
       </x-form-field>
-      <x-tag selectable control="checkbox">Colour</x-tag>`;
+      <x-tag selectable control="checkbox">Colour</x-tag>
+      <x-board label="Board" style="--show-duration: 0; --hide-duration: 0">
+        <x-board-list label="From"><x-board-item value="a">Lamp<x-dropdown-item slot="actions" value="edit">Edit</x-dropdown-item></x-board-item></x-board-list>
+        <x-board-list label="To"></x-board-list>
+        <x-board-list label="Closed" disabled></x-board-list>
+      </x-board>`;
     document.body.appendChild(host);
     try {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -111,6 +121,30 @@ describe('A consumer who rebrands the prefix', () => {
       expect(dialogSpinner).toBeTruthy();
       expect(dialogSpinner!.shadowRoot).toBeTruthy();
       expect(dialog.shadowRoot!.querySelector('l-spinner')).toBeNull();
+
+      // A board item finds its board and lists by their renamed tags, and draws
+      // its chip and menu with renamed children: the menu offers the one other
+      // list that accepts items, and a choice reaches the page as a request.
+      const boardItem = await settle(host.querySelector('x-board-item')!);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(boardItem.shadowRoot!.querySelector('x-tag')!.shadowRoot).toBeTruthy();
+      const menu = boardItem.shadowRoot!.querySelector('x-dropdown')!;
+      const requested: string[] = [];
+      host.addEventListener('move-request', (e) => requested.push(e.to.label));
+      // The menu's entries are built as it opens.
+      await userEvent.click(page.getByRole('button', { name: 'Move Lamp to…' }));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const choices = [...menu.querySelectorAll('x-dropdown-item')];
+      expect(choices.map((c) => c.textContent?.trim())).toEqual(['To']);
+      // The page's own actions, under the renamed tag, follow the lists.
+      expect(
+        page
+          .getByRole('menuitem', { name: 'Edit' })
+          .elements()
+          .some((el: Element) => el.checkVisibility()),
+      ).toBe(true);
+      await userEvent.click(page.getByRole('menuitem', { name: 'To' }));
+      expect(requested).toEqual(['To']);
 
       // The module-scope scroll-lock sheet targets the renamed tag.
       const lock = document.adoptedStyleSheets

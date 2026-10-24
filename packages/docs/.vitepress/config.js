@@ -115,6 +115,7 @@ export default defineConfig({
           el('Alert dialog', 'l-alert-dialog', 'alert-dialog'),
           el('Avatar', 'l-avatar', 'avatar'),
           el('Badge', 'l-badge', 'badge'),
+          el('Board', 'l-board', 'board'),
           el('Breadcrumb', 'nav', 'breadcrumb'),
           el('Carousel', 'l-carousel', 'carousel'),
           el('Button', 'button', 'button'),

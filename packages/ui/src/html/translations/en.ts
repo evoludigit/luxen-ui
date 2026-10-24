@@ -27,6 +27,10 @@ const en: LuxenTranslation = {
   suggestions: 'Suggestions',
   search: 'Search',
 
+  moveItemTo: (item) => `Move ${item} to…`,
+  itemMoved: (item, list) => `${item} moved to ${list}`,
+  dropHere: 'Drop here',
+
   remove: 'Remove',
 
   richTextEditor: 'Rich text editor',

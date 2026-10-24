@@ -98,24 +98,30 @@ export class Dropdown extends LuxenElement {
   }
 
   private _getItems(): DropdownItem[] {
-    const menuSlot = this.shadowRoot!.querySelector<HTMLSlotElement>('slot:not([name])');
-    if (!menuSlot) return [];
-    return (menuSlot.assignedElements() as DropdownItem[]).filter(
-      (el) => el.tagName === tagName('dropdown-item').toUpperCase() && !el.disabled,
-    );
+    return this._getAllItems().filter((el) => !el.disabled);
   }
 
+  /**
+   * The menu's root items. Flattened, so items that a host element forwards
+   * through a `<slot>` of its own (`l-board-item`'s `actions`) count too.
+   */
   private _getAllItems(): DropdownItem[] {
     const menuSlot = this.shadowRoot!.querySelector<HTMLSlotElement>('slot:not([name])');
     if (!menuSlot) return [];
-    return (menuSlot.assignedElements() as DropdownItem[]).filter(
+    return (menuSlot.assignedElements({ flatten: true }) as DropdownItem[]).filter(
       (el) => el.tagName === tagName('dropdown-item').toUpperCase(),
     );
   }
 
-  /** Every item in the menu tree, submenu items included (light-DOM descendants). */
+  /** Every item in the menu tree, submenu items and forwarded ones included. */
   private _getAllItemsDeep(): DropdownItem[] {
-    return [...this.querySelectorAll<DropdownItem>(tagName('dropdown-item'))];
+    const tag = tagName('dropdown-item');
+    const items = new Set(this.querySelectorAll<DropdownItem>(tag));
+    for (const item of this._getAllItems()) {
+      items.add(item);
+      for (const nested of item.querySelectorAll<DropdownItem>(tag)) items.add(nested);
+    }
+    return [...items];
   }
 
   /** The enabled items of the menu level `item` belongs to (its siblings, itself included). */

@@ -301,6 +301,45 @@ describe('A keyboard user can navigate the menu', () => {
     await settle();
     expect(item('check').shadowRoot!.activeElement).not.toBeNull();
   });
+
+  it('reaches items that a host element forwards into the menu through its own slot', async () => {
+    // What l-board-item does with its `actions`: the dropdown lives in the
+    // host's shadow root, and the page's items reach it through a <slot>.
+    if (!customElements.get('x-forwarding-menu')) {
+      customElements.define(
+        'x-forwarding-menu',
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: 'open' }).innerHTML = `
+              <l-dropdown>
+                <button slot="trigger">Actions</button>
+                <l-dropdown-item value="own">Own</l-dropdown-item>
+                <slot></slot>
+              </l-dropdown>`;
+          }
+        },
+      );
+    }
+    await mount(
+      '<x-forwarding-menu><l-dropdown-item value="forwarded">Forwarded</l-dropdown-item></x-forwarding-menu>',
+    );
+    const shadow = host.querySelector('x-forwarding-menu')!.shadowRoot!;
+    const dropdown = shadow.querySelector<Dropdown>('l-dropdown')!;
+    const forwarded = host.querySelector<DropdownItem>('l-dropdown-item')!;
+
+    shadow.querySelector('button')!.focus();
+    const shown = waitForEvent(dropdown, 'after-show');
+    await userEvent.keyboard('{ArrowUp}');
+    await shown;
+    await new Promise((r) => requestAnimationFrame(r));
+
+    expect(deepActiveElement()?.getRootNode()).toBe(forwarded.shadowRoot);
+    await userEvent.keyboard('{ArrowUp}');
+    expect(deepActiveElement()?.getRootNode()).toBe(
+      shadow.querySelector<DropdownItem>('l-dropdown-item')!.shadowRoot,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

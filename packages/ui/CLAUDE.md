@@ -56,6 +56,10 @@ Keep the `.meta.ts` in sync with the element's `.css` file (the CSS custom prope
 
 Every element has an entry in `elements.json` with a `type` field (`native` | `progressive` | `custom` | `shadow`) — add it for new elements; it drives metadata extraction and the `<ElementSpec>` banner.
 
+### Pure state modules
+
+An element whose state a page may hold and update itself (e.g. `l-board`) keeps that logic in `src/html/elements/<name>/<name>-state.ts`: types and pure functions, no DOM, no Lit, no imports. The `"./*/state"` pattern export ships it as `luxen-ui/<name>/state`, so it imports in Node, a store or a server. Never re-export it from the element module or the package root: importing it must never register an element. `tests/package-exports.test.ts` checks the built entry point.
+
 ## Events
 
 Elements dispatch **typed `Event` subclasses**, never `CustomEvent` and never a

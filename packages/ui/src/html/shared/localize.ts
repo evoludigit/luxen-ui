@@ -69,6 +69,11 @@ export interface LuxenTranslation {
   // select
   search?: string;
 
+  // board
+  moveItemTo?: (item: string) => string;
+  itemMoved?: (item: string, list: string) => string;
+  dropHere?: string;
+
   // tag
   remove?: string;
 
@@ -130,7 +135,7 @@ export function getTranslation(lang: string): LuxenTranslation {
 export function resolveTerm<K extends TermKey>(
   lang: string,
   key: K,
-  ...args: LuxenTranslation[K] extends (...a: infer A) => string ? A : []
+  ...args: NonNullable<LuxenTranslation[K]> extends (...a: infer A) => string ? A : []
 ): string {
   const translation = getTranslation(lang);
   const value = (translation[key] ?? en[key]) as LuxenTranslation[K];
@@ -209,7 +214,7 @@ export class LocalizeController implements ReactiveController {
   /** Resolve a localized term for the host's active language. */
   term<K extends TermKey>(
     key: K,
-    ...args: LuxenTranslation[K] extends (...a: infer A) => string ? A : []
+    ...args: NonNullable<LuxenTranslation[K]> extends (...a: infer A) => string ? A : []
   ): string {
     return resolveTerm(this.lang(), key, ...args);
   }
