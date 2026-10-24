@@ -1,5 +1,27 @@
 import { registerTranslation, type LuxenTranslation } from '../shared/localize.js';
 
+const HANGUL_FIRST = 0xac00;
+const HANGUL_LAST = 0xd7a3;
+const RIEUL = 8;
+
+/**
+ * `word` with the particle that fits its last syllable: `afterConsonant` when
+ * it ends in a final consonant (batchim), `afterVowel` when it does not, and
+ * the `either` form, both spelled out, when it does not end in Hangul. With
+ * `rieulAsVowel`, a final ㄹ takes `afterVowel`, as with 으로/로.
+ */
+function withParticle(
+  word: string,
+  [afterConsonant, afterVowel, either]: [string, string, string],
+  rieulAsVowel = false,
+): string {
+  const code = word.codePointAt(word.length - 1) ?? 0;
+  if (code < HANGUL_FIRST || code > HANGUL_LAST) return `${word}${either}`;
+  const final = (code - HANGUL_FIRST) % 28;
+  const vowel = final === 0 || (rieulAsVowel && final === RIEUL);
+  return `${word}${vowel ? afterVowel : afterConsonant}`;
+}
+
 const ko: LuxenTranslation = {
   $code: 'ko',
   $name: '한국어',
@@ -26,6 +48,11 @@ const ko: LuxenTranslation = {
   selectOption: '옵션을 선택하세요.',
   suggestions: '제안',
   search: '검색',
+
+  moveItemTo: (item) => `${item} 이동…`,
+  itemMoved: (item, list) =>
+    `${withParticle(item, ['을', '를', '을(를)'])} ${withParticle(list, ['으로', '로', '(으)로'], true)} 이동함`,
+  dropHere: '여기에 놓기',
 
   remove: '제거',
 

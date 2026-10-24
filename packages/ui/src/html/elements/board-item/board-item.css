@@ -1,0 +1,114 @@
+@layer components {
+  :host {
+    display: inline-flex;
+    vertical-align: middle;
+    max-inline-size: 100%;
+  }
+
+  :host([draggable='true']) {
+    cursor: grab;
+  }
+
+  /* What is left in place while the chip is carried. The drag image is the
+     browser's own snapshot, taken before this applies. */
+  :host([data-dragging]) {
+    opacity: 0.5;
+  }
+
+  .tag {
+    /* Pinned rather than inherited from the tag's defaults: the button below is
+       laid out against them. 24px tall, so the button's target is too (WCAG
+       2.5.8). */
+    --height: 1.5rem;
+    --padding-inline: 0.5rem;
+
+    max-inline-size: 100%;
+  }
+
+  /* The menu's host carries the button, the chip's last segment. Its timings
+     are inherited, so a page sets them once on the board or the list: the
+     dropdown's own `:host` defaults would otherwise shadow them. Unset all the
+     way up, they are invalid and the dropdown falls back to its 150ms. */
+  .menu {
+    --show-duration: inherit;
+    --hide-duration: inherit;
+
+    display: flex;
+  }
+
+  /*
+  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+   🅼🅾🆅🅴 🆃🅾  (≥24px target-size, mdi:chevron-down mask — mirrors l-tag's remove)
+  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+  */
+
+  .trigger {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    /* Flush with the chip's end, over its border, like l-tag's remove segment:
+       the −1px cancels the border, the inline end cancels the padding. */
+    margin-block: -1px;
+    margin-inline: 0.125rem calc(-0.5rem - 1px);
+    padding: 0;
+    border: 1px solid transparent;
+    border-inline-start-color: var(
+      --border-color,
+      color-mix(in oklab, currentColor 14%, transparent)
+    );
+    border-start-end-radius: var(--l-radius-full);
+    border-end-end-radius: var(--l-radius-full);
+    background-color: transparent;
+    background-clip: padding-box;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    &::after {
+      content: '';
+      inline-size: 0.875rem;
+      block-size: 0.875rem;
+      background-color: currentColor;
+      /* https://pictogrammers.com/library/mdi/icon/chevron-down */
+      mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" /></svg>')
+        center / contain no-repeat;
+    }
+
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        background-color: color-mix(in oklab, transparent, currentColor 12%);
+      }
+    }
+
+    &:active:not(:disabled),
+    &[aria-expanded='true'] {
+      background-color: color-mix(in oklab, transparent, currentColor 22%);
+    }
+
+    /* Inset: the segment is flush with the chip's border on three sides. */
+    &:focus-visible {
+      outline: 2px solid var(--l-focus-ring);
+      outline-offset: -2px;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    @media (forced-colors: active) {
+      &::after {
+        background-color: ButtonText;
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .trigger {
+      transition-duration: 0ms;
+    }
+  }
+}

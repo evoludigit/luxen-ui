@@ -125,6 +125,10 @@
       "types": "./dist/translations/*.d.ts",
       "import": "./dist/translations/*.js"
     },
+    "./*/state": {
+      "types": "./dist/elements/*/*-state.d.ts",
+      "import": "./dist/elements/*/*-state.js"
+    },
     "./*": {
       "types": "./dist/elements/*/index.d.ts",
       "import": "./dist/elements/*/index.js"

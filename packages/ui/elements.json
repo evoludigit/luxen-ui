@@ -35,6 +35,32 @@
       "inMockups": true
     },
     {
+      "name": "board",
+      "displayName": "Board",
+      "kind": "element",
+      "type": "shadow",
+      "inSkill": true,
+      "inMockups": true
+    },
+    {
+      "name": "board-item",
+      "displayName": "Board item",
+      "kind": "element",
+      "type": "shadow",
+      "inSkill": false,
+      "inMockups": true,
+      "subItemOf": "board"
+    },
+    {
+      "name": "board-list",
+      "displayName": "Board list",
+      "kind": "element",
+      "type": "shadow",
+      "inSkill": false,
+      "inMockups": true,
+      "subItemOf": "board"
+    },
+    {
       "name": "breadcrumb",
       "displayName": "Breadcrumb",
       "kind": "native",
